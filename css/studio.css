@@ -109,3 +109,11 @@ dialog::backdrop{background:rgba(20,22,26,.4)}
 .imgedit-btnrow button{flex:1}
 .imgedit-foot{display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--line);flex:none}
 .imgedit-foot button{flex:1;justify-content:center}
+
+/* editor embutido no painel (sem popup) — o app chama EPImgEdit.mount() */
+.imgedit-inline{border:1px solid var(--line);border-radius:var(--r);background:var(--surface-2);
+  padding:10px;margin:8px 0 12px}
+.imgedit-inline .imgedit-stage{padding:0;display:flex;flex-direction:column;align-items:center}
+.imgedit-inline .imgedit-tools{padding:10px 0 0;overflow:visible;flex:none}
+.imgedit-inline .imgedit-tools label{margin-bottom:10px}
+.imgedit-inline .imgedit-tools label:last-child{margin-bottom:0}

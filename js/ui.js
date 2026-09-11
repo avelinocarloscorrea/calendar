@@ -158,35 +158,39 @@ function renderMonthList() {
 // `mo` é o objeto que guarda {photo, photoSrc, photoEdit} — os meses usam o
 // próprio state.months[i]; a capa usa um adaptador com getters/setters em
 // cima de state.settings.coverPhoto* (veja fillRight). `aspect` = largura/
-// altura da caixa onde a foto vai entrar (pro editor recortar certo).
-function renderImageField(container, mo, aspect, title, onChange) {
-  container.innerHTML = '';
-  const has = !!mo.photo;
-  const wrap = document.createElement('span'); wrap.className = 'img-fld';
-  if (has) {
-    const img = document.createElement('img'); img.className = 'img-prev'; img.alt = 'prévia'; img.src = mo.photo;
-    wrap.appendChild(img);
+// altura da caixa onde a foto vai entrar. `key` identifica o campo (ex.:
+// 'cover' ou 'month:3') — junto com a fonte, é o que EPImgEdit.mount() usa
+// pra saber que já está editando a MESMA foto e não precisa desmontar nada
+// (senão um arraste em andamento seria interrompido a cada render()).
+// Sem popup — o editor fica embutido aqui, igual ao painel do Polaroide
+// Studio: os controles editam a foto ao vivo, o ajuste é salvo sozinho
+// quando o gesto termina (soltar o arraste/slider).
+function renderImageField(container, mo, aspect, key) {
+  const onCommit = res => { mo.photo = res.dataURL; mo.photoEdit = res.edit; render(); save(); renderMonthList(); };
+  if (!mo.photoSrc) {
+    let btn = container.querySelector('.img-empty-pick');
+    if (!btn) {
+      container.innerHTML = '';
+      btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'wfull img-empty-pick'; btn.dataset.i = 'imagedown'; btn.textContent = 'Escolher foto…';
+      container.appendChild(btn);
+      injectIcons(container);
+    }
+    btn.onclick = () => pickNewPhoto({ key, cb: res => { Object.assign(mo, res); pushHistory(); render(); save(); fillRight(); renderMonthList(); } });
+    return;
   }
-  const row = document.createElement('div'); row.className = 'img-btnrow';
-  const pick = document.createElement('button');
-  pick.type = 'button'; pick.dataset.i = 'imagedown'; pick.textContent = has ? 'Trocar…' : 'Escolher foto…';
-  row.appendChild(pick);
-  if (has && mo.photoSrc) {
-    const reframeBtn = document.createElement('button');
-    reframeBtn.type = 'button'; reframeBtn.dataset.i = 'sliders'; reframeBtn.textContent = 'Reenquadrar';
-    reframeBtn.onclick = () => reframe({ aspect, src: mo.photoSrc, edit: mo.photoEdit, title,
-      cb: res => { Object.assign(mo, res); onChange(); } });
-    row.appendChild(reframeBtn);
+  let host = container.querySelector('.img-editHost');
+  if (!host) {
+    container.innerHTML = '<div class="img-btnrow"><button type="button" data-pick>Trocar foto…</button><button type="button" class="img-x danger" data-clr>Remover foto</button></div><div class="img-editHost"></div>';
+    injectIcons(container);
+    host = container.querySelector('.img-editHost');
   }
-  wrap.appendChild(row);
-  if (has) {
-    const clr = document.createElement('button'); clr.type = 'button'; clr.className = 'img-x danger'; clr.textContent = 'Remover foto';
-    clr.onclick = () => { mo.photo = ''; mo.photoSrc = ''; mo.photoEdit = null; onChange(); };
-    wrap.appendChild(clr);
-  }
-  container.appendChild(wrap);
-  injectIcons(wrap);
-  pick.onclick = () => pickAndEdit({ aspect, title, cb: res => { Object.assign(mo, res); onChange(); } });
+  container.querySelector('[data-pick]').onclick = () => pickNewPhoto({ key, keepEdit: mo.photoEdit,
+    cb: res => { Object.assign(mo, res); pushHistory(); render(); save(); fillRight(); renderMonthList(); } });
+  container.querySelector('[data-clr]').onclick = () => {
+    pushHistory(); mo.photo = ''; mo.photoSrc = ''; mo.photoEdit = null; render(); save(); fillRight(); renderMonthList();
+  };
+  EPImgEdit.mount(host, { key, src: mo.photoSrc, aspect, edit: mo.photoEdit, onHistoryPoint: pushHistory, onCommit });
 }
 function coverPhotoAdapter() {
   return {
@@ -201,11 +205,10 @@ function fillRight() {
   $('#rightCover').hidden = !isCover;
   $('#rightMonth').hidden = !(pd && pd.kind === 'month');
   const [W, H] = paperWH();
-  const onChange = () => { pushHistory(); render(); save(); fillRight(); renderMonthList(); };
   if (isCover) {
     $('#rc_title').value = state.settings.title;
     $('#rc_owner').value = state.settings.owner;
-    renderImageField($('#rc_photoFld'), coverPhotoAdapter(), W / H, 'Foto da capa', onChange);
+    renderImageField($('#rc_photoFld'), coverPhotoAdapter(), W / H, 'cover');
   } else if (pd && pd.kind === 'month') {
     const mo = state.months[pd.m - 1];
     const name = EPDates.MONTHS_PT[pd.m - 1];
@@ -213,7 +216,7 @@ function fillRight() {
     $('#rm_caption').value = mo.caption;
     const L = monthLayout(state.settings.style, { x: 0, y: 0, w: W, h: H });
     const box = L.photo || L.photoThumb || L.photoFull;
-    renderImageField($('#rm_photoFld'), mo, box ? box.w / box.h : W / H, 'Foto de ' + name, onChange);
+    renderImageField($('#rm_photoFld'), mo, box ? box.w / box.h : W / H, 'month:' + pd.m);
   }
   if (typeof mSyncRight === 'function') mSyncRight();
 }
