@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<!-- ============================================================================
+     PRIVACIDADE E SEGURANÇA
+     'default-src none' bloqueia QUALQUER coisa não listada abaixo — inclusive
+     todo envio de dados para fora (fetch, XHR, WebSocket, formulário). O
+     permitido vem só do próprio domínio ('self'). Nenhuma foto, nome ou ajuste
+     sai do aparelho.
+     ========================================================================= -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; form-action 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; manifest-src 'self'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="assets/favicon.svg">
+<link rel="apple-touch-icon" href="assets/icon.svg">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#f2eee6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#14161a" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Calendar">
+<title>Calendar Studio</title>
+<link rel="preload" as="font" type="font/woff2" crossorigin href="assets/arimo-latin-400-normal.woff2">
+<link rel="preload" as="font" type="font/woff2" crossorigin href="assets/arimo-latin-700-normal.woff2">
+<link rel="stylesheet" href="css/base.css?v=001">
+<link rel="stylesheet" href="css/layout.css?v=001">
+<link rel="stylesheet" href="css/studio.css?v=001">
+<link rel="stylesheet" href="css/util.css?v=001">
+<link rel="stylesheet" href="css/print.css?v=001">
+<link rel="stylesheet" href="css/mobile.css?v=001">
+</head>
+<body>
+<div id="app">
+  <div id="bar">
+    <a class="brand" id="brandLink" rel="noopener noreferrer">
+      <span class="mark"><svg viewBox="0 0 64 64" aria-hidden="true"><rect x="10" y="12" width="44" height="38" rx="4" fill="var(--surface)" stroke="var(--brand)" stroke-width="3.5"/><path d="M20 7v11M44 7v11M10 26h44" stroke="var(--brand)" stroke-width="3.2" stroke-linecap="round"/><circle cx="20" cy="35" r="2.4" fill="var(--gold)"/><circle cx="32" cy="35" r="2.4" fill="var(--gold)"/><circle cx="44" cy="35" r="2.4" fill="var(--gold)"/><circle cx="20" cy="44" r="2.4" fill="var(--gold)"/></svg></span>
+      <span class="txt"><span class="t1">Calendar Studio</span><span class="t2">Esmeralda&nbsp;Paper</span></span>
+    </a>
+    <span class="bar-sep"></span>
+    <button id="b_undo" class="iconbtn" data-i="undo" title="Desfazer (Ctrl+Z)"></button>
+    <button id="b_redo" class="iconbtn" data-i="redo" title="Refazer (Ctrl+Y)"></button>
+    <span class="bar-sep"></span>
+    <span class="pagenav">
+      <button id="b_prev" class="iconbtn ghost" data-i="chevleft" title="Página anterior"></button>
+      <span id="pageLbl">1 / 1</span>
+      <button id="b_next" class="iconbtn ghost" data-i="chevright" title="Próxima página"></button>
+    </span>
+    <span class="bar-sep"></span>
+    <button id="b_zout" class="iconbtn ghost" data-i="zoomout" title="Reduzir"></button>
+    <span id="zval">50%</span>
+    <button id="b_zin" class="iconbtn ghost" data-i="zoomin" title="Ampliar"></button>
+    <button id="b_fit" class="iconbtn ghost" data-i="fit" title="Ajustar à tela"></button>
+    <span class="bar-grow"></span>
+    <span class="stat" id="stat"></span>
+    <span class="bar-sep"></span>
+    <span class="bar-cluster">
+      <button id="b_pdf" class="accent" data-i="filepdf">PDF</button>
+      <button id="b_png" class="iconbtn" data-i="imagedown" title="PNG da página atual"></button>
+      <button id="b_print" class="iconbtn" data-i="printer" title="Imprimir"></button>
+    </span>
+    <span class="bar-sep"></span>
+    <span class="bar-cluster">
+      <button id="b_pl" class="iconbtn" data-i="panelleft" title="Painel esquerdo ( [ )"></button>
+      <button id="b_pr" class="iconbtn" data-i="panelright" title="Painel direito ( ] )"></button>
+      <button id="b_zen" class="iconbtn" data-i="eye" title="Tela cheia ( . )"></button>
+      <button id="b_more" class="iconbtn" data-i="more" title="Mais opções"></button>
+    </span>
+  </div>
+
+  <aside id="left" class="scrl">
+    <div class="aside-title"><span data-i="calendar"></span> Calendário</div>
+    <details><summary><span data-i="star"></span> Modelos <span class="caret" data-i="caret"></span></summary><div class="sect">
+      <div id="tplList" class="tpl-list"></div>
+      <p class="hint">Aplica tamanho, estilo, paleta e encadernação de um só golpe. Fotos e legendas que você já colocou não são apagadas.</p>
+    </div></details>
+
+    <details open><summary><span data-i="list"></span> Páginas <span class="caret" data-i="caret"></span></summary><div class="sect">
+      <div id="monList"></div>
+      <p class="hint">Toque numa página para vê-la e editar a foto/legenda dela no painel à direita.</p>
+    </div></details>
+
+    <div class="aside-title mt16"><span data-i="ruler"></span> Documento</div>
+    <details open><summary><span data-i="layout"></span> Tamanho e estilo <span class="caret" data-i="caret"></span></summary><div class="sect">
+      <label>Tamanho <select id="d_size"></select></label>
+      <label>Estilo das páginas de mês <select id="d_style"></select></label>
+      <p class="hint" id="d_styleHint"></p>
+      <label class="row"><input type="checkbox" id="d_showCover"> Incluir capa</label>
+    </div></details>
+
+    <details open><summary><span data-i="star"></span> Ano e datas especiais <span class="caret" data-i="caret"></span></summary><div class="sect">
+      <label>Ano <input type="number" id="d_year" min="1900" max="2200" step="1"></label>
+      <label>Semana começa em
+        <select id="d_week"><option value="mon">Segunda-feira</option><option value="sun">Domingo</option></select></label>
+      <label class="row"><input type="checkbox" id="d_holNacional"> Marcar feriados nacionais</label>
+      <label class="row"><input type="checkbox" id="d_holFacultativo"> Marcar pontos facultativos (Carnaval, Corpus Christi…)</label>
+      <label class="row"><input type="checkbox" id="d_holComemorativa"> Marcar datas comemorativas (Dia das Mães, Black Friday…)</label>
+      <label>Feriados estaduais da UF
+        <select id="d_uf"><option value="">Nenhuma</option></select></label>
+      <label>Eventos (um por linha: <b>AAAA-MM-DD Título</b> ou <b>DD/MM Título</b>)
+        <textarea id="d_events" rows="4" maxlength="8000" placeholder="2026-03-15 Prova&#10;20/09 Aniversário da loja"></textarea></label>
+      <p class="hint">Feriados móveis (Páscoa, Carnaval, Corpus Christi) são calculados no próprio aparelho.</p>
+    </div></details>
+
+    <details><summary><span data-i="palette"></span> Cores <span class="caret" data-i="caret"></span></summary><div class="sect">
+      <div class="grp" id="d_palette"></div>
+      <label>Tinta (linhas e textos) <input type="color" id="d_ink"></label>
+      <label>Destaque (feriados, títulos) <input type="color" id="d_accent"></label>
+      <label>Fundo do papel <input type="color" id="d_paperbg"></label>
+    </div></details>
+
+    <details><summary><span data-i="binding"></span> Acabamento e encadernação <span class="caret" data-i="caret"></span></summary><div class="sect">
+      <label>Encadernação <select id="d_binding"></select></label>
+      <label class="row"><input type="checkbox" id="d_showPunch"> Mostrar guia de furo (só na tela)</label>
+      <label class="row" id="d_printPunchRow"><input type="checkbox" id="d_printPunch"> Imprimir a guia de furo no PDF</label>
+      <div class="field-inline">
+        <label>Gramatura <select id="d_bindGsm">
+          <option value="150">150 g</option><option value="180">180 g</option><option value="220">220 g</option>
+          <option value="250">250 g</option><option value="300">300 g</option>
+        </select></label>
+        <label>Tipo de papel <select id="d_bindKind">
+          <option value="couche">Couché</option><option value="offset">Offset</option>
+          <option value="polen">Pólen / avena</option><option value="reciclado">Reciclado</option>
+        </select></label>
+      </div>
+      <p class="hint" id="d_bindHint"></p>
+    </div></details>
+
+    <details open id="d_exportWrap"><summary><span data-i="download"></span> Exportação e impressão <span class="caret" data-i="caret"></span></summary><div class="sect">
+      <label>Montagem do PDF / impressão
+        <select id="d_exportMode">
+          <option value="real">Tamanho real — 1 página por folha (gráfica)</option>
+          <option value="fit">1 por folha + marcas de corte</option>
+        </select></label>
+      <label id="d_sheetRow">Folha
+        <select id="d_sheet"><option value="a4">A4 — 210 × 297 mm</option><option value="a3">A3 — 297 × 420 mm</option></select></label>
+      <label>Resolução do PNG
+        <select id="d_dpi"><option value="200">200 dpi</option><option value="300">300 dpi</option><option value="450">450 dpi</option><option value="600">600 dpi</option></select></label>
+      <p class="hint"><b>Tamanho real</b>: a página sai no tamanho do calendário — para a gráfica. <b>1 por folha</b>: página centralizada numa folha comum com <b>marcas de corte</b> (útil para o formato quadrado, por exemplo). Imprima sempre em <b>100%</b>, margens <b>Nenhuma</b>. No tamanho <b>Mesa cavalete</b>, a folha sai automaticamente com o dobro da altura — face em cima, apoio embaixo, com uma linha de dobra no meio.</p>
+    </div></details>
+
+    <p class="hint" id="d_privadoNote"><span class="pill">Privado</span> &nbsp;O calendário fica só neste navegador. Para backup use <b>Salvar projeto</b> no menu.
+      <a id="m_acervo" rel="noopener noreferrer" hidden>↗ Ferramentas — mais utilitários</a></p>
+  </aside>
+
+  <div id="stage">
+    <div id="sheets"></div>
+  </div>
+
+  <aside id="right" class="scrl">
+    <div id="rightCover" hidden>
+      <div class="aside-title"><span data-i="bookmark"></span> Capa</div>
+      <label>Título <input type="text" id="rc_title" maxlength="60"></label>
+      <label>Nome (pertence a…) <input type="text" id="rc_owner" maxlength="60"></label>
+      <label>Foto da capa</label>
+      <div id="rc_photoFld"></div>
+      <label>Ajuste da foto <select id="rc_fit"><option value="cover">Preenche e corta</option><option value="contain">Cabe inteira</option></select></label>
+    </div>
+    <div id="rightMonth" hidden>
+      <div class="aside-title"><span data-i="photo"></span> <span id="rm_title">Mês</span></div>
+      <label>Foto do mês</label>
+      <div id="rm_photoFld"></div>
+      <label>Ajuste da foto <select id="rm_fit"><option value="cover">Preenche e corta</option><option value="contain">Cabe inteira</option></select></label>
+      <label>Legenda (opcional, aceita {mes}, {ano}) <input type="text" id="rm_caption" maxlength="120" placeholder="ex.: Praia em {mes}"></label>
+      <p class="hint">A legenda aparece no rodapé da página, embaixo do nome do mês.</p>
+    </div>
+  </aside>
+</div>
+
+<!-- ===== casca de celular (≤ 820 px) ===== -->
+<div id="mroot" aria-hidden="true">
+  <header id="mtop">
+    <span class="mbrand">Calendar Studio</span>
+    <span class="mpg" id="mpg"></span>
+    <button class="miconbtn" id="mu_undo" data-i="undo" title="Desfazer"></button>
+    <button class="miconbtn" id="mu_redo" data-i="redo" title="Refazer"></button>
+    <button class="miconbtn" id="mu_more" data-i="more" title="Mais"></button>
+  </header>
+  <div id="mbody">
+    <div id="mstageWrap"><!-- #stage entra aqui --></div>
+    <section class="msheet scrl" id="msheet_doc" data-tab="documento" hidden><!-- #left entra aqui --></section>
+    <section class="msheet scrl" id="msheet_pag" data-tab="pagina" hidden><!-- #right entra aqui --></section>
+    <section class="msheet scrl" id="msheet_export" data-tab="exportar" hidden>
+      <div class="mx-card">
+        <h3>Formato</h3>
+        <div id="mx_settings"><!-- #d_exportWrap entra aqui no celular --></div>
+      </div>
+      <div class="mx-card">
+        <h3>Baixar</h3>
+        <button class="mbig primary" id="mx_pdf" data-i="filepdf">Baixar PDF</button>
+        <div class="m2"><button class="mbig" id="mx_png" data-i="imagedown">PNG da página</button><button class="mbig" id="mx_print" data-i="printer">Imprimir</button></div>
+      </div>
+      <div class="mx-card">
+        <h3>Projeto</h3>
+        <div class="m2"><button class="mbig" id="mx_save" data-i="save">Salvar .json</button><button class="mbig" id="mx_open" data-i="folder">Abrir .json</button></div>
+        <p class="hint">Tudo fica só neste aparelho. <b>Salvar</b> baixa um arquivo para backup ou para abrir noutro lugar.</p>
+      </div>
+      <div class="mx-card">
+        <h3>Ajuda</h3>
+        <a class="mbig" href="guia.html" target="_blank" rel="noopener noreferrer" data-i="page">Guia do usuário</a>
+      </div>
+    </section>
+  </div>
+  <nav id="mtabs">
+    <button data-tab="paginas" class="on"><span data-i="page"></span><i>Páginas</i></button>
+    <button data-tab="documento"><span data-i="ruler"></span><i>Documento</i></button>
+    <button data-tab="pagina"><span data-i="sliders"></span><i>Página</i></button>
+    <button data-tab="exportar"><span data-i="download"></span><i>Exportar</i></button>
+  </nav>
+</div>
+
+<button id="zenExit" class="iconbtn" data-i="eyeoff" title="Sair da tela cheia (Esc)" hidden></button>
+
+<div id="menu" class="scrl" hidden>
+  <button id="m_pdf" data-i="filepdf">Exportar PDF</button>
+  <button id="m_png" data-i="imagedown">Exportar PNG (página atual)</button>
+  <button id="m_print" data-i="printer">Imprimir</button>
+  <div class="msep"></div>
+  <button id="m_new" data-i="filenew">Novo calendário</button>
+  <button id="m_save" data-i="save">Salvar projeto (.json)</button>
+  <button id="m_open" data-i="folder">Abrir projeto…</button>
+  <div class="msep"></div>
+  <button id="m_install" data-i="download" hidden>Instalar na tela de início</button>
+  <a id="m_guide" href="guia.html" target="_blank" rel="noopener noreferrer"><span data-i="page"></span> Guia do usuário</a>
+  <button id="m_help" data-i="help">Atalhos de teclado</button>
+  <button id="m_privacy" data-i="shield">Privacidade e segurança</button>
+  <button id="m_about" data-i="info">Sobre</button>
+</div>
+
+<input type="file" id="file_open" accept="application/json,.json" hidden>
+<div id="toast" hidden></div>
+<div id="busy" hidden><div class="card"><span class="spin"></span><span id="busyTxt">Processando…</span></div></div>
+
+<dialog id="help">
+  <div class="dhead">Atalhos <button class="iconbtn ghost" data-close data-i="x"></button></div>
+  <div class="dbody scrl"><table>
+    <tr><td><kbd>Ctrl</kbd> + roda</td><td>Zoom no ponto do cursor</td></tr>
+    <tr><td>Roda / arraste com botão do meio</td><td>Rolar / deslocar as páginas</td></tr>
+    <tr><td>PageUp / PageDown · ↑ ↓</td><td>Página anterior / seguinte</td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd></td><td>Desfazer / Refazer</td></tr>
+    <tr><td><kbd>[</kbd> / <kbd>]</kbd></td><td>Ocultar painel esquerdo / direito</td></tr>
+    <tr><td><kbd>.</kbd> / <kbd>Esc</kbd></td><td>Tela cheia / sair</td></tr>
+  </table></div>
+</dialog>
+
+<dialog id="privacy">
+  <div class="dhead">Privacidade e segurança <button class="iconbtn ghost" data-close data-i="x"></button></div>
+  <div class="dbody scrl">
+    <p><span class="pill">100% no seu computador</span></p>
+    <p>Este programa <b>não envia nada</b> para servidor nenhum. Fotos, nomes e ajustes nunca saem do navegador.</p>
+    <h4>Mecanismos ativos</h4>
+    <p>• <b>Content-Security-Policy</b> com <code>default-src 'none'</code>: o navegador bloqueia qualquer envio de dados (fetch, XHR, formulário, WebSocket) e qualquer objeto/plugin.<br>
+       • <b>Sem scripts externos</b> (<code>script-src 'self'</code>) e sem código embutido — nada de terceiros roda aqui.<br>
+       • Toda foto que você adiciona (capa ou de um mês) é <b>redesenhada internamente</b>: metadados (EXIF/GPS) e conteúdo escondido são removidos, e o arquivo é reduzido antes de entrar no projeto.<br>
+       • O PDF é montado no próprio programa, vetor por vetor.<br>
+       • Projetos abertos (.json) passam pela mesma limpeza; valores fora do padrão são corrigidos.<br>
+       • O calendário fica só no armazenamento local deste navegador. Para levar a outro aparelho, use <b>Salvar projeto</b>.</p>
+    <button id="p_wipe" class="danger wfull mt4" data-i="trash">Apagar tudo deste navegador</button>
+  </div>
+</dialog>
+
+<dialog id="about">
+  <div class="dhead">Sobre <button class="iconbtn ghost" data-close data-i="x"></button></div>
+  <div class="dbody scrl">
+    <p><b>Calendar Studio</b> — monta um calendário de parede, quadrado, mesa ou ímã de geladeira com suas fotos, feriados nacionais/estaduais, datas móveis e eventos próprios, em 6 estilos de página, com espaço reservado e guia de furo pra wire-o/espiral (ou dobra automática em 2 pro formato cavalete), pronto para impressão em PDF vetorial. 8 modelos prontos pra começar rápido.</p>
+    <p>Projeto de portfólio de <b>Carlos Avelino Correa</b> — <a href="https://github.com/avelinocarloscorrea" target="_blank" rel="noopener noreferrer">github.com/avelinocarloscorrea</a>.</p>
+    <p>Novo por aqui? Veja o <a href="guia.html" target="_blank" rel="noopener noreferrer">guia do usuário</a>.</p>
+    <p class="faint">Funciona offline. Nenhum dado é coletado.</p>
+  </div>
+</dialog>
+
+<script defer src="vendor/core/dates.js?v=001"></script>
+<script defer src="vendor/core/binding.js?v=001"></script>
+<script defer src="js/config.js?v=001"></script>
+<script defer src="js/pen.js?v=001"></script>
+<script defer src="js/fonts.js?v=001"></script>
+<script defer src="js/images.js?v=001"></script>
+<script defer src="js/calendar.js?v=001"></script>
+<script defer src="js/io.js?v=001"></script>
+<script defer src="js/mobile.js?v=001"></script>
+<script defer src="js/install.js?v=001"></script>
+<script defer src="js/ui.js?v=001"></script>
+</body>
+</html>

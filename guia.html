@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; base-uri 'none'; style-src 'self'; img-src 'self' data:; font-src 'self'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="assets/favicon.svg">
+<title>Guia do usuário — Calendar Studio</title>
+<link rel="stylesheet" href="css/guia.css?v=1">
+</head>
+<body>
+<header class="top">
+  <div class="in">
+    <span class="mark"><svg viewBox="0 0 64 64" aria-hidden="true"><rect x="10" y="12" width="44" height="38" rx="4" fill="var(--surface)" stroke="var(--brand)" stroke-width="3.5"/><path d="M20 7v11M44 7v11M10 26h44" stroke="var(--brand)" stroke-width="3.2" stroke-linecap="round"/></svg></span>
+    <span><h1>Guia do usuário</h1><span class="sub">Calendar Studio · Esmeralda Paper</span></span>
+    <a class="cta" href="index.html">Abrir a ferramenta <span class="lbl">&rarr;</span></a>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="toc">
+    <details class="toc-wrap" open>
+      <summary>Neste guia</summary>
+      <a href="#oque">1. O que é</a>
+      <a href="#modelos">2. Modelos prontos</a>
+      <a href="#tamanho">3. Tamanho e estilo das páginas</a>
+      <a href="#datas">4. Ano, feriados e eventos</a>
+      <a href="#fotos">5. Fotos — capa e meses</a>
+      <a href="#cores">6. Cores e acabamento</a>
+      <a href="#encadernacao">7. Encadernação — wire-o, espiral e mesa cavalete</a>
+      <a href="#exportar">8. Exportar e imprimir</a>
+      <a href="#projeto">9. Salvar o projeto</a>
+      <a href="#faq">10. Perguntas frequentes</a>
+    </details>
+  </nav>
+
+  <main class="doc">
+    <section id="oque"><h2>1. O que é</h2>
+      <p class="lead">O <b>Calendar Studio</b> monta um calendário personalizado — de parede, quadrado ou de mesa — com suas fotos, os feriados do Brasil e seus próprios eventos, e exporta um <b>PDF vetorial</b> pronto para impressão.</p>
+      <p class="note"><b>100% no seu navegador.</b> Nada é enviado a nenhum servidor. Funciona offline.</p>
+      <p>O calendário é sempre uma <b>capa</b> (opcional) + <b>12 páginas de mês</b>. A lista <b>Páginas</b>, no painel esquerdo, mostra as 13 páginas — toque numa para vê-la no centro e editar a foto/legenda dela no painel à direita.</p>
+    </section>
+
+    <section id="modelos"><h2>2. Modelos prontos</h2>
+      <p>O painel <b>Modelos</b>, no topo à esquerda, tem 8 pontos de partida — cada um ajusta tamanho, estilo, paleta e encadernação de um só golpe: <b>Parede minimalista</b>, <b>Parede com fotos</b> (já vem com wire-o no topo), <b>Pôster A3</b>, <b>Quadrado para redes</b>, <b>Mesa executiva</b> (wire-o lateral), <b>Mesa cavalete</b> (dobra sozinha, fica de pé), <b>Ímã de geladeira</b> e <b>Preto e branco editorial</b>.</p>
+      <p class="note">Aplicar um modelo <b>não apaga</b> fotos e legendas que você já colocou — só ajusta tamanho/estilo/paleta/encadernação. Dá pra experimentar à vontade.</p>
+    </section>
+
+    <section id="tamanho"><h2>3. Tamanho e estilo das páginas</h2>
+      <p>Em <b>Documento → Tamanho e estilo</b> escolha o formato: parede A4 ou A3 (retrato), parede A4 paisagem, quadrado (formato clássico de calendário de foto), mesa A6 paisagem, ímã de geladeira (bem pequeno) ou mesa cavalete (dobra em 2 e fica de pé sozinha — ver seção 7).</p>
+      <p>Cada mês pode usar um de 6 estilos:</p>
+      <figure>
+        <svg viewBox="0 0 640 340" role="img" aria-label="Os 6 estilos de página de mês: foto no topo, foto de fundo, só a grade, foto ao lado, moldura, foto no canto">
+          <g transform="translate(6,6)">
+            <rect class="d-fill-card d-stroke" x="0" y="0" width="130" height="150" rx="4"/>
+            <rect class="d-photo" x="8" y="8" width="114" height="66"/>
+            <rect class="d-fill-panel" x="8" y="82" width="114" height="60" rx="2"/>
+            <text class="d-label" x="65" y="160" text-anchor="middle">Foto no topo</text>
+          </g>
+          <g transform="translate(166,6)">
+            <rect class="d-fill-card d-stroke" x="0" y="0" width="130" height="150" rx="4"/>
+            <rect class="d-photo" x="0" y="0" width="130" height="150" rx="4"/>
+            <rect class="d-fill-panel" x="8" y="70" width="114" height="72" rx="2" opacity="0.92"/>
+            <text class="d-label" x="65" y="160" text-anchor="middle">Foto de fundo</text>
+          </g>
+          <g transform="translate(326,6)">
+            <rect class="d-fill-card d-stroke" x="0" y="0" width="130" height="150" rx="4"/>
+            <rect class="d-fill-panel" x="8" y="8" width="114" height="134" rx="2"/>
+            <text class="d-label" x="65" y="160" text-anchor="middle">Só a grade</text>
+          </g>
+          <g transform="translate(486,6)">
+            <rect class="d-fill-card d-stroke" x="0" y="0" width="130" height="150" rx="4"/>
+            <rect class="d-photo" x="8" y="8" width="42" height="134"/>
+            <rect class="d-fill-panel" x="58" y="8" width="64" height="134" rx="2"/>
+            <text class="d-label" x="65" y="160" text-anchor="middle">Foto ao lado</text>
+          </g>
+          <g transform="translate(6,180)">
+            <rect class="d-fill-card d-stroke" x="0" y="0" width="130" height="150" rx="4"/>
+            <rect class="d-photo" x="0" y="0" width="130" height="150" rx="4"/>
+            <rect class="d-fill-panel" x="10" y="86" width="110" height="56" rx="3" opacity="0.94"/>
+            <text class="d-label" x="65" y="160" text-anchor="middle">Moldura</text>
+          </g>
+          <g transform="translate(166,180)">
+            <rect class="d-fill-card d-stroke" x="0" y="0" width="130" height="150" rx="4"/>
+            <rect class="d-photo" x="8" y="8" width="32" height="32"/>
+            <rect class="d-fill-panel" x="8" y="48" width="114" height="94" rx="2"/>
+            <text class="d-label" x="65" y="160" text-anchor="middle">Foto no canto</text>
+          </g>
+        </svg>
+        <figcaption>Os retângulos claros representam a grade do mês; os escuros, a área da foto.</figcaption>
+      </figure>
+      <p>O toggle <b>Incluir capa</b> liga/desliga a página de capa (título, nome e foto).</p>
+    </section>
+
+    <section id="datas"><h2>4. Ano, feriados e eventos</h2>
+      <p>Em <b>Documento → Ano e datas especiais</b>: escolha o <b>ano</b> e se a semana começa na <b>segunda</b> ou no <b>domingo</b>.</p>
+      <ul>
+        <li><b>Feriados nacionais</b> — fixos (Ano Novo, Tiradentes…) e móveis (Sexta-feira Santa, Páscoa), calculados no próprio aparelho.</li>
+        <li><b>Pontos facultativos</b> — Carnaval, Quarta-feira de Cinzas, Corpus Christi.</li>
+        <li><b>Datas comemorativas</b> — Dia das Mães, dos Pais, Black Friday etc.</li>
+        <li><b>Feriados estaduais</b> — escolha a UF (opcional).</li>
+        <li><b>Eventos próprios</b> — um por linha: <code>2026-03-15 Prova</code> (data fixa) ou <code>20/09 Aniversário da loja</code> (repete todo ano).</li>
+      </ul>
+      <p>As marcações aparecem no dia certo, em cada página de mês, na cor de destaque.</p>
+    </section>
+
+    <section id="fotos"><h2>5. Fotos — capa e meses</h2>
+      <p>Toque numa página da lista <b>Páginas</b> para selecioná-la. O painel à direita muda para os campos daquela página:</p>
+      <ul class="steps">
+        <li><b>Capa</b>: título, nome (pertence a…), foto e o ajuste dela (preenche e corta, ou cabe inteira).</li>
+        <li><b>Mês</b>: foto do mês, ajuste, e uma legenda opcional — aceita <code>{mes}</code> e <code>{ano}</code>, por exemplo "Praia em {mes}".</li>
+      </ul>
+      <p class="tip"><b>Sua foto não sai do aparelho.</b> Ao escolher um arquivo, ele é redesenhado num canvas interno — isso remove todo metadado (EXIF/GPS) antes de entrar no calendário.</p>
+      <p>Se o estilo do mês não usa foto (<b>Só a grade</b>) ou você não escolheu uma, a página sai só com a grade — sem espaços em branco estranhos no PDF.</p>
+    </section>
+
+    <section id="cores"><h2>6. Cores e acabamento</h2>
+      <p>Em <b>Cores</b>, escolha uma das 7 paletas prontas (Esmeralda, Grafite, Marinho, Ameixa, Floresta, Sépia, Preto e branco) ou personalize a tinta, a cor de destaque e o fundo do papel.</p>
+      <p>Em <b>Acabamento e encadernação</b>, escolha a gramatura e o tipo de papel — o painel mostra uma <b>estimativa</b> de espessura da pilha e do diâmetro de anel wire-o ou espiral, para levar à gráfica. É só estimativa: confira com o papel real antes de comprar o anel.</p>
+    </section>
+
+    <section id="encadernacao"><h2>7. Encadernação — wire-o, espiral e mesa cavalete</h2>
+      <p>O seletor <b>Encadernação</b> (no mesmo painel "Acabamento e encadernação") reserva espaço de verdade na página — nada de foto, grade ou texto entra na faixa onde o furo vai ser feito:</p>
+      <ul>
+        <li><b>Wire-o no topo</b> — pra pendurar na parede; reserva uma faixa no alto de cada página.</li>
+        <li><b>Wire-o lateral</b> — pra folhear como um bloco de mesa; reserva uma faixa na lateral esquerda.</li>
+        <li><b>Espiral no topo</b> — igual ao wire-o no topo, com furos mais próximos.</li>
+        <li><b>Grampo de canto</b> — não reserva faixa nem mostra furo; um lembrete de que você vai grampear o canto na gráfica.</li>
+      </ul>
+      <p>Ligue <b>Mostrar guia de furo</b> pra ver os pontinhos na tela (não entram no PDF a menos que você ligue <b>Imprimir a guia de furo no PDF</b> também).</p>
+      <p><b>Mesa cavalete</b> é um tamanho, não uma encadernação: ao escolhê-lo, o PDF exportado sai automaticamente com o <b>dobro da altura</b> — a página normal em cima, um painel de apoio liso embaixo, e uma linha de dobra tracejada no meio. Dobre ao meio e cole a base: o calendário fica de pé sozinho, sem precisar de suporte. Esse tamanho não combina com "1 por folha + corte" (a montagem fica travada em "Tamanho real").</p>
+    </section>
+
+    <section id="exportar"><h2>8. Exportar e imprimir</h2>
+      <p>O botão <b>PDF</b> (barra de cima) gera o arquivo vetorial com as 13 páginas. Em <b>Exportação e impressão</b> escolha a montagem:</p>
+      <table>
+        <tr><th>Montagem</th><th>Quando usar</th></tr>
+        <tr><td><b>Tamanho real</b></td><td>a página sai exatamente no tamanho do calendário — para levar à gráfica.</td></tr>
+        <tr><td><b>1 por folha + corte</b></td><td>centraliza a página numa folha A4/A3 comum com marcas de corte nos 4 cantos — útil quando o tamanho escolhido (o quadrado, por exemplo) não é uma folha de papel padrão.</td></tr>
+      </table>
+      <p><b>PNG da página</b> exporta só a página atual como imagem (resolução ajustável em Exportação e impressão). <b>Imprimir</b> monta um documento de impressão dedicado com a mesma montagem do PDF — deixe a escala em <b>100%</b> e as margens em <b>Nenhuma</b> na caixa de diálogo do navegador.</p>
+    </section>
+
+    <section id="projeto"><h2>9. Salvar o projeto</h2>
+      <p>O calendário fica salvo automaticamente neste navegador (armazenamento local). Para levar a outro aparelho, ou como backup, use <b>Salvar projeto</b> no menu <b>⋯</b> — baixa um arquivo <code>.json</code>. <b>Abrir projeto…</b> carrega esse arquivo de volta (também funciona arrastando o <code>.json</code> para a janela).</p>
+    </section>
+
+    <section id="faq" class="faq"><h2>10. Perguntas frequentes</h2>
+      <details><summary>Minhas fotos ficam salvas em algum servidor?</summary><div class="a"><p>Não. Tudo — inclusive as fotos — fica só no armazenamento local deste navegador, neste aparelho. A ferramenta não tem servidor: a Content-Security-Policy do próprio site bloqueia qualquer tentativa de envio de dados.</p></div></details>
+      <details><summary>Posso usar o mesmo calendário em anos diferentes?</summary><div class="a"><p>Sim — troque o campo <b>Ano</b> em "Ano e datas especiais". Os feriados e a grade de dias são recalculados na hora; fotos e legendas continuam as mesmas.</p></div></details>
+      <details><summary>Por que a foto não preenche a página exatamente como eu esperava no PDF?</summary><div class="a"><p>O ajuste "preenche e corta" (cover) é fiel na tela; no PDF exportado a foto é encaixada na área reservada mantendo a simplicidade do gerador vetorial. Prefira fotos já próximas da proporção da área (ex.: paisagem para "foto no topo"/"foto de fundo", retrato para "foto ao lado").</p></div></details>
+      <details><summary>O quadrado (210×210 mm) é um tamanho de papel comum?</summary><div class="a"><p>Não — é cortado de uma folha maior. Use a montagem <b>"1 por folha + corte"</b> (A4 ou A3) para imprimir com marcas de corte nos 4 cantos.</p></div></details>
+      <details><summary>Escolhi wire-o mas a grade ainda parece perto do topo — tem algo errado?</summary><div class="a"><p>Provavelmente não: a faixa reservada (14 mm por padrão) é proporcional ao tamanho da página, então num formato pequeno ela ocupa uma fatia visualmente maior. Ligue <b>Mostrar guia de furo</b> pra confirmar onde a faixa termina.</p></div></details>
+      <details><summary>Como monto a mesa cavalete depois de imprimir?</summary><div class="a"><p>Corte a folha no tamanho impresso, dobre exatamente na linha tracejada do meio e cole (ou use fita dupla-face) o painel de apoio na parte de trás da base, formando um "L" invertido que segura o calendário em pé.</p></div></details>
+    </section>
+  </main>
+</div>
+
+<footer class="foot">
+  <div class="in">
+    <span>Calendar Studio — Esmeralda Paper</span>
+    <a href="index.html">Abrir a ferramenta</a>
+    <a class="backtop" href="#">Voltar ao topo ↑</a>
+  </div>
+</footer>
+</body>
+</html>

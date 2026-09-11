@@ -1,0 +1,21 @@
+/* Planner Studio — css/print.css
+   O botão "Imprimir" (e Ctrl/Cmd+P) monta um documento de impressão dedicado
+   (#printRoot): 1 página do miolo por folha, no tamanho físico exato, com
+   margem de lombada e alternância frente/verso. O CSS abaixo é só a rede de
+   segurança caso a impressão dispare antes desse documento existir. */
+@media print {
+  @page { margin: 0; }
+  #bar, #left, #right, #empty, #toast, #busy, #menu, #zenExit, #mroot, #mtabs, #mtop { display: none !important; }
+  #app { display: block; height: auto; }
+  #app.hide-left, #app.hide-right { grid-template-columns: none; }
+  #stage { position: static; overflow: visible; padding: 0 !important; background: #fff; display: block; }
+  #sheets { display: block; gap: 0; zoom: 1 !important; padding: 0; }
+  .page {
+    box-shadow: none !important; margin: 0 !important; border-radius: 0; outline: 0 !important;
+    break-after: page; page-break-after: always; break-inside: avoid; page-break-inside: avoid;
+  }
+  .page:last-child { break-after: auto; page-break-after: auto; }
+  .page svg [stroke-dasharray] { display: none; }      /* some com a guia de margem */
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+#printRoot { display: none; }

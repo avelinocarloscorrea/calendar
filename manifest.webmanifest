@@ -1,0 +1,19 @@
+{
+  "name": "Calendar Studio",
+  "short_name": "Calendar",
+  "description": "Gere um calendário personalizado (parede, quadrado ou mesa) com suas fotos e feriados do Brasil, pronto para impressão. Roda no navegador, sem enviar nada.",
+  "lang": "pt-BR",
+  "start_url": "./index.html",
+  "scope": "./",
+  "id": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#e6e0d4",
+  "theme_color": "#3d5c52",
+  "categories": ["productivity", "utilities", "photo"],
+  "icons": [
+    { "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
