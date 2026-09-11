@@ -25,12 +25,12 @@
 <title>Calendar Studio</title>
 <link rel="preload" as="font" type="font/woff2" crossorigin href="assets/arimo-latin-400-normal.woff2">
 <link rel="preload" as="font" type="font/woff2" crossorigin href="assets/arimo-latin-700-normal.woff2">
-<link rel="stylesheet" href="css/base.css?v=001">
-<link rel="stylesheet" href="css/layout.css?v=001">
-<link rel="stylesheet" href="css/studio.css?v=001">
-<link rel="stylesheet" href="css/util.css?v=001">
-<link rel="stylesheet" href="css/print.css?v=001">
-<link rel="stylesheet" href="css/mobile.css?v=001">
+<link rel="stylesheet" href="css/base.css?v=002">
+<link rel="stylesheet" href="css/layout.css?v=002">
+<link rel="stylesheet" href="css/studio.css?v=002">
+<link rel="stylesheet" href="css/util.css?v=002">
+<link rel="stylesheet" href="css/print.css?v=002">
+<link rel="stylesheet" href="css/mobile.css?v=002">
 </head>
 <body>
 <div id="app">
@@ -156,13 +156,12 @@
       <label>Nome (pertence a…) <input type="text" id="rc_owner" maxlength="60"></label>
       <label>Foto da capa</label>
       <div id="rc_photoFld"></div>
-      <label>Ajuste da foto <select id="rc_fit"><option value="cover">Preenche e corta</option><option value="contain">Cabe inteira</option></select></label>
+      <p class="hint">Ao escolher (ou reenquadrar) uma foto, um editor abre pra você arrastar, dar zoom, girar e ajustar cor — igual ao Polaroide Studio.</p>
     </div>
     <div id="rightMonth" hidden>
       <div class="aside-title"><span data-i="photo"></span> <span id="rm_title">Mês</span></div>
       <label>Foto do mês</label>
       <div id="rm_photoFld"></div>
-      <label>Ajuste da foto <select id="rm_fit"><option value="cover">Preenche e corta</option><option value="contain">Cabe inteira</option></select></label>
       <label>Legenda (opcional, aceita {mes}, {ano}) <input type="text" id="rm_caption" maxlength="120" placeholder="ex.: Praia em {mes}"></label>
       <p class="hint">A legenda aparece no rodapé da página, embaixo do nome do mês.</p>
     </div>
@@ -271,16 +270,17 @@
   </div>
 </dialog>
 
-<script defer src="vendor/core/dates.js?v=001"></script>
-<script defer src="vendor/core/binding.js?v=001"></script>
-<script defer src="js/config.js?v=001"></script>
-<script defer src="js/pen.js?v=001"></script>
-<script defer src="js/fonts.js?v=001"></script>
-<script defer src="js/images.js?v=001"></script>
-<script defer src="js/calendar.js?v=001"></script>
-<script defer src="js/io.js?v=001"></script>
-<script defer src="js/mobile.js?v=001"></script>
-<script defer src="js/install.js?v=001"></script>
-<script defer src="js/ui.js?v=001"></script>
+<script defer src="vendor/core/dates.js?v=002"></script>
+<script defer src="vendor/core/binding.js?v=002"></script>
+<script defer src="vendor/core/imgedit.js?v=002"></script>
+<script defer src="js/config.js?v=002"></script>
+<script defer src="js/pen.js?v=002"></script>
+<script defer src="js/fonts.js?v=002"></script>
+<script defer src="js/images.js?v=002"></script>
+<script defer src="js/calendar.js?v=002"></script>
+<script defer src="js/io.js?v=002"></script>
+<script defer src="js/mobile.js?v=002"></script>
+<script defer src="js/install.js?v=002"></script>
+<script defer src="js/ui.js?v=002"></script>
 </body>
 </html>

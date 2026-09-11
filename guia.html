@@ -107,13 +107,15 @@
       <p>As marcações aparecem no dia certo, em cada página de mês, na cor de destaque.</p>
     </section>
 
-    <section id="fotos"><h2>5. Fotos — capa e meses</h2>
-      <p>Toque numa página da lista <b>Páginas</b> para selecioná-la. O painel à direita muda para os campos daquela página:</p>
+    <section id="fotos"><h2>5. Fotos — capa e meses (com editor)</h2>
+      <p>Toque numa página da lista <b>Páginas</b> para selecioná-la. O painel à direita muda para os campos daquela página — <b>Capa</b> (título, nome, foto) ou <b>Mês</b> (foto, legenda).</p>
+      <p>Ao tocar em <b>Escolher foto…</b>, depois de escolher o arquivo abre um <b>editor</b> — o mesmo espírito do Polaroide Studio: arraste a foto pra posicionar, dê zoom (roda do mouse, pinça no celular ou o controle deslizante), ajuste rotação, espelhe e afine brilho/contraste/saturação/sépia/preto-e-branco. O quadro do editor já mostra exatamente a proporção da área onde a foto vai entrar. Toque em <b>Aplicar</b> pra confirmar.</p>
+      <p>Depois de ajustada, o botão <b>Reenquadrar</b> reabre o editor no mesmo ponto de onde parou — dá pra afinar quantas vezes quiser sem perder qualidade (a foto original fica guardada à parte).</p>
       <ul class="steps">
-        <li><b>Capa</b>: título, nome (pertence a…), foto e o ajuste dela (preenche e corta, ou cabe inteira).</li>
-        <li><b>Mês</b>: foto do mês, ajuste, e uma legenda opcional — aceita <code>{mes}</code> e <code>{ano}</code>, por exemplo "Praia em {mes}".</li>
+        <li>Um <b>par de dedos</b> (ou <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + roda) dá zoom apontando onde você tocou/passou o mouse.</li>
+        <li><b>{mes}</b> e <b>{ano}</b> funcionam na legenda do mês, por exemplo "Praia em {mes}".</li>
       </ul>
-      <p class="tip"><b>Sua foto não sai do aparelho.</b> Ao escolher um arquivo, ele é redesenhado num canvas interno — isso remove todo metadado (EXIF/GPS) antes de entrar no calendário.</p>
+      <p class="tip"><b>Sua foto não sai do aparelho.</b> Ao escolher um arquivo, ele é redesenhado num canvas interno (isso já remove EXIF/GPS) antes mesmo de abrir o editor; o recorte final também é assado localmente ao aplicar.</p>
       <p>Se o estilo do mês não usa foto (<b>Só a grade</b>) ou você não escolheu uma, a página sai só com a grade — sem espaços em branco estranhos no PDF.</p>
     </section>
 
@@ -151,7 +153,7 @@
     <section id="faq" class="faq"><h2>10. Perguntas frequentes</h2>
       <details><summary>Minhas fotos ficam salvas em algum servidor?</summary><div class="a"><p>Não. Tudo — inclusive as fotos — fica só no armazenamento local deste navegador, neste aparelho. A ferramenta não tem servidor: a Content-Security-Policy do próprio site bloqueia qualquer tentativa de envio de dados.</p></div></details>
       <details><summary>Posso usar o mesmo calendário em anos diferentes?</summary><div class="a"><p>Sim — troque o campo <b>Ano</b> em "Ano e datas especiais". Os feriados e a grade de dias são recalculados na hora; fotos e legendas continuam as mesmas.</p></div></details>
-      <details><summary>Por que a foto não preenche a página exatamente como eu esperava no PDF?</summary><div class="a"><p>O ajuste "preenche e corta" (cover) é fiel na tela; no PDF exportado a foto é encaixada na área reservada mantendo a simplicidade do gerador vetorial. Prefira fotos já próximas da proporção da área (ex.: paisagem para "foto no topo"/"foto de fundo", retrato para "foto ao lado").</p></div></details>
+      <details><summary>Por que a foto não fica exatamente como eu vi no editor?</summary><div class="a"><p>O quadro do editor já usa a proporção exata da área de destino — o que aparece ali é assado (recortado) numa imagem final e é isso que entra no PDF, sem surpresas. Se algo saiu diferente, reabra com <b>Reenquadrar</b> e ajuste de novo.</p></div></details>
       <details><summary>O quadrado (210×210 mm) é um tamanho de papel comum?</summary><div class="a"><p>Não — é cortado de uma folha maior. Use a montagem <b>"1 por folha + corte"</b> (A4 ou A3) para imprimir com marcas de corte nos 4 cantos.</p></div></details>
       <details><summary>Escolhi wire-o mas a grade ainda parece perto do topo — tem algo errado?</summary><div class="a"><p>Provavelmente não: a faixa reservada (14 mm por padrão) é proporcional ao tamanho da página, então num formato pequeno ela ocupa uma fatia visualmente maior. Ligue <b>Mostrar guia de furo</b> pra confirmar onde a faixa termina.</p></div></details>
       <details><summary>Como monto a mesa cavalete depois de imprimir?</summary><div class="a"><p>Corte a folha no tamanho impresso, dobre exatamente na linha tracejada do meio e cole (ou use fita dupla-face) o painel de apoio na parte de trás da base, formando um "L" invertido que segura o calendário em pé.</p></div></details>

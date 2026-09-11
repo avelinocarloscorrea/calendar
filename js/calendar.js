@@ -13,6 +13,11 @@ let currentPage = 0;
 let zoom = 0.5, userZoomed = false;
 const stage = $('#stage'), sheetsEl = $('#sheets');
 
+function normPhotoEdit(v) {
+  if (!v || typeof v !== 'object') return null;
+  return (typeof EPImgEdit !== 'undefined' && EPImgEdit.normEdit) ? EPImgEdit.normEdit(v) : null;
+}
+
 /* ================= estado / migração ================= */
 function newState() {
   return { schema: 1, settings: { ...DEFAULTS }, months: Array.from({ length: 12 }, emptyMonth) };
@@ -41,7 +46,8 @@ function migrate(raw) {
     owner: sanitizeText(ds.owner, 60),
     showCover: ds.showCover !== false,
     coverPhoto: validImageSrc(ds.coverPhoto) ? ds.coverPhoto : '',
-    coverFit: ds.coverFit === 'contain' ? 'contain' : 'cover',
+    coverPhotoSrc: validImageSrc(ds.coverPhotoSrc) ? ds.coverPhotoSrc : '',
+    coverPhotoEdit: normPhotoEdit(ds.coverPhotoEdit),
     bindGsm: clamp(Math.round(num(ds.bindGsm, DEFAULTS.bindGsm)), 30, 400),
     bindKind: ['offset', 'polen', 'couche', 'reciclado'].indexOf(ds.bindKind) >= 0 ? ds.bindKind : DEFAULTS.bindKind,
     binding: BINDING_TYPES[ds.binding] ? ds.binding : DEFAULTS.binding,
@@ -58,7 +64,8 @@ function migrate(raw) {
     const m = (mIn[i] && typeof mIn[i] === 'object') ? mIn[i] : {};
     return {
       photo: validImageSrc(m.photo) ? m.photo : '',
-      fit: m.fit === 'contain' ? 'contain' : 'cover',
+      photoSrc: validImageSrc(m.photoSrc) ? m.photoSrc : '',
+      photoEdit: normPhotoEdit(m.photoEdit),
       caption: sanitizeText(m.caption, 120),
     };
   });
@@ -181,7 +188,7 @@ function drawCover(pen, box, s) {
   const pad = clamp(Math.min(w, h) * 0.035, 5, 10);
   const hasPhoto = !!s.coverPhoto;
   if (hasPhoto && pen.image) {
-    pen.image(s.coverPhoto, box.x, box.y, w, h, { fit: s.coverFit });
+    pen.image(s.coverPhoto, box.x, box.y, w, h, { fit: 'cover' });
   } else {
     pen.rect(box.x, box.y, w, h, { fill: s.paperBg });
     pen.rect(box.x + pad, box.y + pad, w - 2 * pad, h - 2 * pad, { stroke: s.accent, w: 0.6 });
@@ -288,7 +295,7 @@ function drawMonthPage(pen, box, s, m, opts) {
   const L = monthLayout(s.style, box);
   const mo = (state.months && state.months[m - 1]) || emptyMonth();
   if (s.style === 'fotofundo' || s.style === 'moldura') {
-    if (mo.photo && pen.image) pen.image(mo.photo, L.photoFull.x, L.photoFull.y, L.photoFull.w, L.photoFull.h, { fit: mo.fit });
+    if (mo.photo && pen.image) pen.image(mo.photo, L.photoFull.x, L.photoFull.y, L.photoFull.w, L.photoFull.h, { fit: 'cover' });
     else pen.rect(box.x, box.y, box.w, box.h, { fill: s.paperBg });
     if (s.style === 'moldura') {
       pen.rect(box.x + 5, box.y + 5, box.w - 10, box.h - 10, { stroke: s.accent, w: 0.6 });
@@ -298,13 +305,13 @@ function drawMonthPage(pen, box, s, m, opts) {
     }
   } else if (s.style === 'fotocanto') {
     pen.rect(box.x, box.y, box.w, box.h, { fill: s.paperBg });
-    if (mo.photo && pen.image) pen.image(mo.photo, L.photoThumb.x, L.photoThumb.y, L.photoThumb.w, L.photoThumb.h, { fit: mo.fit });
+    if (mo.photo && pen.image) pen.image(mo.photo, L.photoThumb.x, L.photoThumb.y, L.photoThumb.w, L.photoThumb.h, { fit: 'cover' });
     else if (opts && opts.screen) pen.rect(L.photoThumb.x, L.photoThumb.y, L.photoThumb.w, L.photoThumb.h, { stroke: mixHex(s.ink, s.paperBg, 0.75), w: 0.25, dash: [1.6, 1.6] });
     pen.rect(L.photoThumb.x, L.photoThumb.y, L.photoThumb.w, L.photoThumb.h, { stroke: s.accent, w: 0.4 });
   } else {
     pen.rect(box.x, box.y, box.w, box.h, { fill: s.paperBg });
     if (L.photo) {
-      if (mo.photo && pen.image) pen.image(mo.photo, L.photo.x, L.photo.y, L.photo.w, L.photo.h, { fit: mo.fit });
+      if (mo.photo && pen.image) pen.image(mo.photo, L.photo.x, L.photo.y, L.photo.w, L.photo.h, { fit: 'cover' });
       else if (opts && opts.screen) pen.rect(L.photo.x, L.photo.y, L.photo.w, L.photo.h, { stroke: mixHex(s.ink, s.paperBg, 0.75), w: 0.25, dash: [1.6, 1.6] });
     }
   }
@@ -325,10 +332,10 @@ function drawPageInto(pen, pd, idx, opts = {}) {
 function pageSig(idx, pd) {
   const s = state.settings;
   const mo = pd.kind === 'month' ? state.months[pd.m - 1] : null;
-  return [idx, pd.kind, pd.m || 0, mo ? mo.photo.length + '|' + mo.fit + '|' + mo.caption : '',
+  return [idx, pd.kind, pd.m || 0, mo ? mo.photo.length + '|' + mo.caption : '',
     s.year, s.weekStart, s.uf, s.holNacional, s.holFacultativo, s.holComemorativa, s.events,
     s.ink, s.accent, s.paperBg, s.size, s.style, s.title, s.owner, s.showCover,
-    s.coverPhoto.length, s.coverFit, s.binding, s.showPunch].join('|');
+    s.coverPhoto.length, s.binding, s.showPunch].join('|');
 }
 function buildSVG(idx, pd) {
   const [W, H] = paperWH();

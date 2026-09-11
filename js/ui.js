@@ -155,52 +155,71 @@ function renderMonthList() {
 }
 
 /* ================= painel direito (página atual) ================= */
-function renderImageField(container, value, onPick, onClear) {
+// `mo` é o objeto que guarda {photo, photoSrc, photoEdit} — os meses usam o
+// próprio state.months[i]; a capa usa um adaptador com getters/setters em
+// cima de state.settings.coverPhoto* (veja fillRight). `aspect` = largura/
+// altura da caixa onde a foto vai entrar (pro editor recortar certo).
+function renderImageField(container, mo, aspect, title, onChange) {
   container.innerHTML = '';
-  const has = !!value;
+  const has = !!mo.photo;
   const wrap = document.createElement('span'); wrap.className = 'img-fld';
-  const btn = document.createElement('button');
-  btn.type = 'button'; btn.className = 'wfull'; btn.dataset.i = 'imagedown';
-  btn.textContent = has ? 'Trocar…' : 'Escolher foto…';
-  wrap.appendChild(btn);
   if (has) {
-    const img = document.createElement('img'); img.className = 'img-prev'; img.alt = 'prévia'; img.src = value;
+    const img = document.createElement('img'); img.className = 'img-prev'; img.alt = 'prévia'; img.src = mo.photo;
+    wrap.appendChild(img);
+  }
+  const row = document.createElement('div'); row.className = 'img-btnrow';
+  const pick = document.createElement('button');
+  pick.type = 'button'; pick.dataset.i = 'imagedown'; pick.textContent = has ? 'Trocar…' : 'Escolher foto…';
+  row.appendChild(pick);
+  if (has && mo.photoSrc) {
+    const reframeBtn = document.createElement('button');
+    reframeBtn.type = 'button'; reframeBtn.dataset.i = 'sliders'; reframeBtn.textContent = 'Reenquadrar';
+    reframeBtn.onclick = () => reframe({ aspect, src: mo.photoSrc, edit: mo.photoEdit, title,
+      cb: res => { Object.assign(mo, res); onChange(); } });
+    row.appendChild(reframeBtn);
+  }
+  wrap.appendChild(row);
+  if (has) {
     const clr = document.createElement('button'); clr.type = 'button'; clr.className = 'img-x danger'; clr.textContent = 'Remover foto';
-    wrap.append(img, clr);
-    clr.onclick = onClear;
+    clr.onclick = () => { mo.photo = ''; mo.photoSrc = ''; mo.photoEdit = null; onChange(); };
+    wrap.appendChild(clr);
   }
   container.appendChild(wrap);
   injectIcons(wrap);
-  btn.onclick = () => pickImage(onPick);
+  pick.onclick = () => pickAndEdit({ aspect, title, cb: res => { Object.assign(mo, res); onChange(); } });
+}
+function coverPhotoAdapter() {
+  return {
+    get photo() { return state.settings.coverPhoto; }, set photo(v) { state.settings.coverPhoto = v; },
+    get photoSrc() { return state.settings.coverPhotoSrc; }, set photoSrc(v) { state.settings.coverPhotoSrc = v; },
+    get photoEdit() { return state.settings.coverPhotoEdit; }, set photoEdit(v) { state.settings.coverPhotoEdit = v; },
+  };
 }
 function fillRight() {
   const pd = curPage();
   const isCover = pd && pd.kind === 'cover';
   $('#rightCover').hidden = !isCover;
   $('#rightMonth').hidden = !(pd && pd.kind === 'month');
+  const [W, H] = paperWH();
+  const onChange = () => { pushHistory(); render(); save(); fillRight(); renderMonthList(); };
   if (isCover) {
     $('#rc_title').value = state.settings.title;
     $('#rc_owner').value = state.settings.owner;
-    $('#rc_fit').value = state.settings.coverFit;
-    renderImageField($('#rc_photoFld'), state.settings.coverPhoto,
-      uri => { pushHistory(); state.settings.coverPhoto = uri; render(); save(); fillRight(); },
-      () => { pushHistory(); state.settings.coverPhoto = ''; render(); save(); fillRight(); });
+    renderImageField($('#rc_photoFld'), coverPhotoAdapter(), W / H, 'Foto da capa', onChange);
   } else if (pd && pd.kind === 'month') {
     const mo = state.months[pd.m - 1];
-    $('#rm_title').textContent = EPDates.MONTHS_PT[pd.m - 1];
-    $('#rm_fit').value = mo.fit;
+    const name = EPDates.MONTHS_PT[pd.m - 1];
+    $('#rm_title').textContent = name;
     $('#rm_caption').value = mo.caption;
-    renderImageField($('#rm_photoFld'), mo.photo,
-      uri => { pushHistory(); mo.photo = uri; render(); save(); fillRight(); renderMonthList(); },
-      () => { pushHistory(); mo.photo = ''; render(); save(); fillRight(); renderMonthList(); });
+    const L = monthLayout(state.settings.style, { x: 0, y: 0, w: W, h: H });
+    const box = L.photo || L.photoThumb || L.photoFull;
+    renderImageField($('#rm_photoFld'), mo, box ? box.w / box.h : W / H, 'Foto de ' + name, onChange);
   }
   if (typeof mSyncRight === 'function') mSyncRight();
 }
 function bindRight() {
   $('#rc_title').oninput = e => { const el = e.target; state.settings.title = sanitizeText(el.value, 60); clearTimeout(el._t); el._t = setTimeout(() => { pushHistory(); render(); save(); renderMonthList(); }, 250); };
   $('#rc_owner').oninput = e => { const el = e.target; state.settings.owner = sanitizeText(el.value, 60); clearTimeout(el._t); el._t = setTimeout(() => { pushHistory(); render(); save(); }, 250); };
-  $('#rc_fit').onchange = e => { pushHistory(); state.settings.coverFit = e.target.value; render(); save(); };
-  $('#rm_fit').onchange = e => { const pd = curPage(); if (!pd || pd.kind !== 'month') return; pushHistory(); state.months[pd.m - 1].fit = e.target.value; render(); save(); };
   $('#rm_caption').oninput = e => {
     const pd = curPage(); if (!pd || pd.kind !== 'month') return;
     const el = e.target; state.months[pd.m - 1].caption = sanitizeText(el.value, 120);

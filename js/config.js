@@ -157,7 +157,8 @@ const DEFAULTS = {
   owner: '',
   showCover: true,
   coverPhoto: '',
-  coverFit: 'cover',
+  coverPhotoSrc: '',
+  coverPhotoEdit: null,
   bindGsm: 180,
   bindKind: 'couche',
   binding: 'none',            // chave de BINDING_TYPES
@@ -168,7 +169,7 @@ const DEFAULTS = {
   exportDPI: 300,
 };
 
-function emptyMonth() { return { photo: '', fit: 'cover', caption: '' }; }
+function emptyMonth() { return { photo: '', photoSrc: '', photoEdit: null, caption: '' }; }
 
 const MONTHS_SHORT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
