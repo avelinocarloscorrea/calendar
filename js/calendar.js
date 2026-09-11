@@ -398,8 +398,14 @@ function zoomAt(cx, cy, factor) {
 }
 function gotoPage(i) {
   const n = pageCount();
+  const had = currentPage;
   currentPage = clamp(i, 0, Math.max(0, n - 1));
   render();
+  // igual ao Polaroide Studio: tocar numa página com foto abre os ajustes
+  // dela no painel direito, mesmo se o painel estava fechado.
+  if (currentPage !== had && typeof uiState !== 'undefined' && !uiState.right && !zen && typeof togglePanel === 'function' && !isMobile()) {
+    togglePanel('right', true);
+  }
   const pg = sheetsEl.children[currentPage];
   // instantâneo (não 'smooth'): evita a rolagem "correr atrás" e o listener de
   // rolagem recalcular currentPage a partir de uma posição intermediária,

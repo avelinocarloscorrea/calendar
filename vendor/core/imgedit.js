@@ -109,6 +109,15 @@
   }
   function escHtml(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m])); }
 
+  // presets de filtro — só os 2 básicos por design (nada de galeria de
+  // efeitos): "Básico" (neutro) e "Clássico" (um tom quente e suave, a
+  // mesma família visual das ferramentas). Mexem só no `filter`, nunca em
+  // zoom/posição/rotação.
+  const FILTER_PRESETS = {
+    basico: { label: 'Básico', filter: { brightness: 1, contrast: 1, saturate: 1, sepia: 0, grayscale: 0 } },
+    classico: { label: 'Clássico', filter: { brightness: 1.04, contrast: 1.08, saturate: 0.9, sepia: 0.22, grayscale: 0 } },
+  };
+
   const TOOLS_HTML =
     `<div class="imgedit-stage"><div class="imgedit-win"><img class="imgedit-img" alt=""></div>` +
     `<p class="imgedit-hint">Arraste para posicionar · roda ou pinça para zoom</p></div>` +
@@ -119,6 +128,9 @@
       `</div>` +
       `<label>Zoom <span class="v" data-zoomv></span><input type="range" data-zoom min="0.4" max="4" step="0.01"></label>` +
       `<label>Rotação <span class="v" data-rotv></span><input type="range" data-rot min="-45" max="45" step="0.5"></label>` +
+      `<div class="imgedit-btnrow imgedit-presets">` +
+        Object.entries(FILTER_PRESETS).map(([k, p]) => `<button type="button" class="chip" data-preset="${k}">${escHtml(p.label)}</button>`).join('') +
+      `</div>` +
       `<label>Brilho <span class="v" data-brv></span><input type="range" data-br min="0.4" max="1.8" step="0.01"></label>` +
       `<label>Contraste <span class="v" data-cov></span><input type="range" data-co min="0.4" max="1.8" step="0.01"></label>` +
       `<label>Saturação <span class="v" data-sav></span><input type="range" data-sa min="0" max="2.2" step="0.01"></label>` +
@@ -145,6 +157,16 @@
       se: root.querySelector('[data-se]'), sev: root.querySelector('[data-sev]'),
       gr: root.querySelector('[data-gr]'), grv: root.querySelector('[data-grv]'),
     };
+    const presetBtns = Array.from(root.querySelectorAll('[data-preset]'));
+    function activePreset() {
+      const f = edit.filter;
+      for (const [k, p] of Object.entries(FILTER_PRESETS)) {
+        const pf = p.filter;
+        if (Math.abs(f.brightness - pf.brightness) < 0.005 && Math.abs(f.contrast - pf.contrast) < 0.005 &&
+            Math.abs(f.saturate - pf.saturate) < 0.005 && Math.abs(f.sepia - pf.sepia) < 0.005 && Math.abs(f.grayscale - pf.grayscale) < 0.005) return k;
+      }
+      return null;
+    }
     function syncUI() {
       els.zoom.value = edit.zoom; els.zoomv.textContent = edit.zoom.toFixed(2) + '×';
       els.rot.value = edit.rot; els.rotv.textContent = edit.rot.toFixed(1) + '°';
@@ -153,6 +175,8 @@
       els.sa.value = edit.filter.saturate; els.sav.textContent = Math.round(edit.filter.saturate * 100) + '%';
       els.se.value = edit.filter.sepia; els.sev.textContent = Math.round(edit.filter.sepia * 100) + '%';
       els.gr.value = edit.filter.grayscale; els.grv.textContent = Math.round(edit.filter.grayscale * 100) + '%';
+      const ap = activePreset();
+      presetBtns.forEach(b => b.classList.toggle('on', b.dataset.preset === ap));
     }
     function paint() { img.style.transform = imgTransform(edit); img.style.filter = cssFilter(edit); }
     syncUI(); paint();
@@ -177,6 +201,10 @@
 
     root.querySelector('[data-flip]').onclick = () => { startGesture(); edit.flipH = !edit.flipH; paint(); settle(); };
     root.querySelector('[data-reset]').onclick = () => { startGesture(); edit = defaultEdit(); syncUI(); paint(); settle(); };
+    presetBtns.forEach(b => b.onclick = () => {
+      const p = FILTER_PRESETS[b.dataset.preset]; if (!p) return;
+      startGesture(); edit.filter = { ...p.filter }; syncUI(); paint(); settle();
+    });
 
     // arrastar pra posicionar
     let drag = null;
@@ -323,7 +351,7 @@
     return _active;
   }
 
-  const api = { mount, open, close: closeActive, bake, bakeDataURL, normEdit, defaultEdit, cssFilter, imgTransform, loadImage };
+  const api = { mount, open, close: closeActive, bake, bakeDataURL, normEdit, defaultEdit, cssFilter, imgTransform, loadImage, FILTER_PRESETS };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (root) root.EPImgEdit = api;
 })(typeof self !== 'undefined' ? self : (typeof globalThis !== 'undefined' ? globalThis : this));
