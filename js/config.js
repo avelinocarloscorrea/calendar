@@ -164,7 +164,7 @@ const DEFAULTS = {
   binding: 'none',            // chave de BINDING_TYPES
   showPunch: false,           // guia de furo (só tela)
   printPunch: false,          // idem, também no PDF/impressão
-  exportMode: 'real',        // real | fit (imposição na folha de saída)
+  exportMode: 'auto',         // auto (decide sozinho) | real | fit
   sheet: 'a4',                // a4 | a3 (folha de saída p/ o modo "fit")
   exportDPI: 300,
 };

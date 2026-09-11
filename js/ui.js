@@ -50,7 +50,18 @@ function syncDocControls() {
   set('#d_sheet', s.sheet);
   set('#d_dpi', s.exportDPI);
   $('#d_exportMode').disabled = isStand;
+  const eff = effectiveExportMode();
   $('#d_sheetRow').hidden = s.exportMode !== 'fit' || isStand;
+  const hint = $('#d_exportHint');
+  if (hint) {
+    const [W, H] = paperWH();
+    const now = isStand
+      ? 'A mesa cavalete sempre sai com o dobro da altura — face em cima, apoio embaixo, linha de dobra no meio.'
+      : eff.mode === 'fit'
+        ? `Como está agora: o calendário (${W.toFixed(0)}×${H.toFixed(0)} mm) sai centralizado numa folha ${eff.sheet === 'a3' ? 'A3' : 'A4'} com <b>marcas de corte</b> nos 4 cantos — imprima e corte.`
+        : `Como está agora: o calendário sai no tamanho exato (${W.toFixed(0)}×${H.toFixed(0)} mm), sem marca de corte — é o próprio tamanho já pronto.`;
+    hint.innerHTML = `<b>Automático</b>: decide sozinho — se o calendário cabe numa A4 mas não é uma A4 inteira, centraliza com marcas de corte; senão sai no tamanho exato. ${now} Imprima sempre em <b>100%</b>, margens <b>Nenhuma</b>.`;
+  }
   refreshColorFields();
   if (typeof mSync === 'function') mSync();
 }

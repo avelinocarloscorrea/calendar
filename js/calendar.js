@@ -55,7 +55,9 @@ function migrate(raw) {
     printPunch: !!ds.printPunch,
     // mesa cavalete só sai em tamanho real — "fit" (centralizar numa folha
     // maior + corte) não faz sentido pra uma folha que já vai dobrar ao meio.
-    exportMode: (ds.exportMode === 'fit' && !isStand) ? 'fit' : 'real',
+    // 'auto' (padrão) decide real/fit sozinho na hora de exportar/imprimir,
+    // conforme o tamanho — ver effectiveExportMode().
+    exportMode: isStand ? 'real' : (['auto', 'real', 'fit'].indexOf(ds.exportMode) >= 0 ? ds.exportMode : DEFAULTS.exportMode),
     sheet: ds.sheet === 'a3' ? 'a3' : 'a4',
     exportDPI: clamp(Math.round(num(ds.exportDPI, DEFAULTS.exportDPI)), 150, 600),
   };
@@ -90,6 +92,24 @@ function load() {
 
 /* ================= geometria ================= */
 function paperWH() { const p = SIZES[state.settings.size] || SIZES.a4p; return [p.w, p.h]; }
+
+// decide sozinho a montagem de saída (real | fit) quando settings.exportMode
+// === 'auto' (padrão): se o tamanho já É uma folha A4 inteira, tamanho real
+// (nada pra cortar); se CABE dentro de uma A4, centraliza numa A4 com
+// marcas de corte — pronto pra imprimir em casa/escritório e cortar; do
+// contrário (maior que A4 — ex. o pôster A3), tamanho real mesmo (gráfica).
+// Mesa cavalete é sempre 'real' (já tem o próprio modo de dobra).
+function fitsWithinA4(w, h) { return (w <= 210.5 && h <= 297.5) || (w <= 297.5 && h <= 210.5); }
+function isFullSheet(w, h, sw, sh) { return (Math.abs(w - sw) < 0.5 && Math.abs(h - sh) < 0.5) || (Math.abs(w - sh) < 0.5 && Math.abs(h - sw) < 0.5); }
+function effectiveExportMode() {
+  const s = state.settings;
+  if (SIZES[s.size] && SIZES[s.size].stand) return { mode: 'real', sheet: s.sheet, auto: true };
+  if (s.exportMode !== 'auto') return { mode: s.exportMode, sheet: s.sheet, auto: false };
+  const [W, H] = paperWH();
+  if (isFullSheet(W, H, 210, 297)) return { mode: 'real', sheet: s.sheet, auto: true };
+  if (fitsWithinA4(W, H)) return { mode: 'fit', sheet: 'a4', auto: true };
+  return { mode: 'real', sheet: s.sheet, auto: true };
+}
 
 /* ================= páginas ================= */
 function expand() {

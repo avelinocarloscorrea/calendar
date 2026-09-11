@@ -9,9 +9,12 @@ function outSheet(id) { return OUT_SHEETS[id] || OUT_SHEETS.a4; }
 
 // "real": 1 folha = 1 página, tamanho exato do miolo — para a gráfica.
 // "fit": página centralizada numa folha comum + marcas de corte nos 4 cantos.
+// Qual dos dois roda é decidido por effectiveExportMode() (calendar.js) —
+// 'auto' (padrão) escolhe sozinho conforme o tamanho do calendário.
 function impositionPlan(nPages) {
   const s = state.settings, [W, H] = paperWH();
-  const mode = s.exportMode === 'fit' ? 'fit' : 'real';
+  const eff = effectiveExportMode();
+  const mode = eff.mode === 'fit' ? 'fit' : 'real';
   // mesa cavalete: a folha sai com o DOBRO da altura — face em cima, painel de
   // apoio embaixo (drawStandBase, calendar.js), com uma faixa de dobra entre
   // os dois. migrate() já garante que isso só acontece com exportMode 'real'.
@@ -23,7 +26,7 @@ function impositionPlan(nPages) {
     for (let i = 0; i < nPages; i++) sheets.push({ slots: [{ src: i, ox: 0, oy: 0, sc: 1 }], trims: [] });
     return { mode, sheetW: W, sheetH, sheets, stand, gap, faceH: H };
   }
-  const B = outSheet(s.sheet);
+  const B = outSheet(eff.sheet);
   let sw = B[0], sh = B[1];
   if (W > sw || H > sh) { sw = B[1]; sh = B[0]; }
   const sc = Math.min(1, (sw - 6) / W, (sh - 6) / H);
@@ -34,11 +37,14 @@ function impositionPlan(nPages) {
 }
 function sheetFileTag(s) {
   if (SIZES[s.size] && SIZES[s.size].stand) return '-cavalete';
-  return s.exportMode === 'fit' ? '-' + (s.sheet === 'a3' ? 'A3' : 'A4') + '-corte' : '';
+  const eff = effectiveExportMode();
+  return eff.mode === 'fit' ? '-' + (eff.sheet === 'a3' ? 'A3' : 'A4') + '-corte' : '';
 }
 function modeLabel(s) {
   if (SIZES[s.size] && SIZES[s.size].stand) return 'mesa cavalete — dobrar ao meio';
-  return s.exportMode === 'fit' ? '1 página por folha + marcas de corte' : 'tamanho real';
+  const eff = effectiveExportMode();
+  const base = eff.mode === 'fit' ? `1 página por folha ${eff.sheet === 'a3' ? 'A3' : 'A4'} + marcas de corte` : 'tamanho real';
+  return eff.auto ? base + ' (automático)' : base;
 }
 
 function drawSheetMarks(pen, sheet) {

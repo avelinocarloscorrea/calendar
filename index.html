@@ -131,6 +131,7 @@
     <details open id="d_exportWrap"><summary><span data-i="download"></span> Exportação e impressão <span class="caret" data-i="caret"></span></summary><div class="sect">
       <label>Montagem do PDF / impressão
         <select id="d_exportMode">
+          <option value="auto">Automático (recomendado) — pronto pra cortar</option>
           <option value="real">Tamanho real — 1 página por folha (gráfica)</option>
           <option value="fit">1 por folha + marcas de corte</option>
         </select></label>
@@ -138,7 +139,7 @@
         <select id="d_sheet"><option value="a4">A4 — 210 × 297 mm</option><option value="a3">A3 — 297 × 420 mm</option></select></label>
       <label>Resolução do PNG
         <select id="d_dpi"><option value="200">200 dpi</option><option value="300">300 dpi</option><option value="450">450 dpi</option><option value="600">600 dpi</option></select></label>
-      <p class="hint"><b>Tamanho real</b>: a página sai no tamanho do calendário — para a gráfica. <b>1 por folha</b>: página centralizada numa folha comum com <b>marcas de corte</b> (útil para o formato quadrado, por exemplo). Imprima sempre em <b>100%</b>, margens <b>Nenhuma</b>. No tamanho <b>Mesa cavalete</b>, a folha sai automaticamente com o dobro da altura — face em cima, apoio embaixo, com uma linha de dobra no meio.</p>
+      <p class="hint" id="d_exportHint"></p>
     </div></details>
 
     <p class="hint" id="d_privadoNote"><span class="pill">Privado</span> &nbsp;O calendário fica só neste navegador. Para backup use <b>Salvar projeto</b> no menu.
