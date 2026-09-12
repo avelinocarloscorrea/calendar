@@ -531,7 +531,6 @@ function bindGlobal() {
     document.body.classList.add('onboarding');
     $('#ra_continue').onclick = () => { markAsked(); box.hidden = true; document.body.classList.remove('onboarding'); finishInit(); };
     $('#ra_new').onclick = () => {
-      if (!confirm('Começar um novo calendário? O salvo continuará guardado até você mudar algo.')) return;
       markAsked(); box.hidden = true;
       newDoc(); syncDocControls(); render(); save(); fit();
       enterOnboarding();
