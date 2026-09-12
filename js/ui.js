@@ -56,11 +56,12 @@ function syncDocControls() {
   if (hint) {
     const [W, H] = paperWH();
     const now = isStand
-      ? 'A mesa cavalete sempre sai com o dobro da altura — face em cima, apoio embaixo, linha de dobra no meio.'
+      ? 'A mesa cavalete sai com o dobro da altura: face em cima, apoio embaixo, dobra no meio.'
       : eff.mode === 'fit'
-        ? `Como está agora: o calendário (${W.toFixed(0)}×${H.toFixed(0)} mm) sai centralizado numa folha ${eff.sheet === 'a3' ? 'A3' : 'A4'} com <b>marcas de corte</b> nos 4 cantos — imprima e corte.`
-        : `Como está agora: o calendário sai no tamanho exato (${W.toFixed(0)}×${H.toFixed(0)} mm), sem marca de corte — é o próprio tamanho já pronto.`;
-    hint.innerHTML = `<b>Automático</b>: decide sozinho — se o calendário cabe numa A4 mas não é uma A4 inteira, centraliza com marcas de corte; senão sai no tamanho exato. ${now} Imprima sempre em <b>100%</b>, margens <b>Nenhuma</b>.`;
+        ? `Sai centralizado numa folha ${eff.sheet === 'a3' ? 'A3' : 'A4'} (${W.toFixed(0)}×${H.toFixed(0)} mm) com <b>marcas de corte</b>.`
+        : `Sai no tamanho exato: ${W.toFixed(0)}×${H.toFixed(0)} mm, sem marca de corte.`;
+    const auto = s.exportMode === 'auto' ? '<b>Automático</b> ajusta sozinho ao tamanho da folha. ' : '';
+    hint.innerHTML = `${auto}${now} Imprima em <b>100%</b>, sem margens.`;
   }
   refreshColorFields();
   if (typeof mSync === 'function') mSync();
