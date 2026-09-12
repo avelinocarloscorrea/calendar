@@ -166,6 +166,7 @@ function n2(v) { return Math.round(v * 100) / 100; }
 async function printDoc() {
   const pages = expand();
   const s = state.settings, [W, H] = paperWH();
+  const eff = effectiveExportMode();
   const plan = impositionPlan(pages.length);
   busy('Preparando impressão — ' + plan.sheets.length + ' folha(s)…');
   await new Promise(r => setTimeout(r, 20));
@@ -173,8 +174,16 @@ async function printDoc() {
     const old = document.getElementById('printRoot'); if (old) old.remove();
     if (window.__printCleanup) { try { window.__printCleanup(); } catch (e) {} window.__printCleanup = null; }
     const SW = n2(plan.sheetW), SH = n2(plan.sheetH);
+    // @page com palavra-chave ("A4 landscape") em vez de milímetros faz o
+    // navegador sincronizar sozinho o seletor Retrato/Paisagem do diálogo de
+    // impressão (a forma numérica define o tamanho certo mas não o seletor,
+    // o que confunde quem está imprimindo). Só quando a folha é um tamanho
+    // padrão (modo 'fit'); no modo 'real' a folha é o próprio calendário
+    // (tamanhos como ímã/mesa não têm palavra-chave equivalente em CSS).
+    const sheetKw = plan.mode === 'fit' ? (eff && eff.sheet === 'a3' ? 'A3' : 'A4') : null;
+    const pageSize = sheetKw ? sheetKw + ' ' + (SW > SH ? 'landscape' : 'portrait') : (SW + 'mm ' + SH + 'mm');
     const removeRules = installPrintRules([
-      '@page{size:' + SW + 'mm ' + SH + 'mm;margin:0}',
+      '@page{size:' + pageSize + ';margin:0}',
       '@media print{' +
         'html,body{margin:0!important;padding:0!important;background:#fff!important;height:auto!important;min-height:0!important;overflow:visible!important}' +
         'body>*{display:none!important}body>#printRoot{display:block!important}' +
