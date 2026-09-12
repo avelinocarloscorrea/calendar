@@ -72,8 +72,8 @@ Carlos Avelino Correa — <https://github.com/avelinocarloscorrea>
 
 ## Código-fonte
 
-<https://github.com/avelinocarloscorrea/calendar> — repositório privado por
-enquanto; a ideia é abrir para a comunidade mais adiante.
+<https://github.com/avelinocarloscorrea/calendar> — código aberto sob
+licença MIT.
 
 ## Licença
 
