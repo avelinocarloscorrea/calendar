@@ -125,20 +125,97 @@ function bindDoc() {
 
 /* ================= modelos ================= */
 function renderTemplates() {
-  const box = $('#tplList'); if (!box) return;
+  fillTplGrid($('#tplList'), onboard => { if (onboard) exitOnboarding(); });
+  fillTplGrid($('#tplListOb'), () => exitOnboarding());
+}
+function fillTplGrid(box, afterApply) {
+  if (!box) return;
   box.innerHTML = '';
   TEMPLATES.forEach(t => {
-    const b = document.createElement('button'); b.type = 'button'; b.className = 'tpl-row';
-    b.innerHTML = `<b>${esc(t.name)}</b><i>${esc(t.desc)}</i>`;
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'tpl-card';
+    b.innerHTML = `<span class="tpl-card__thumb">${tplThumbSVG(t)}</span>
+      <span class="tpl-card__name">${esc(t.name)}</span>
+      <span class="tpl-card__desc">${esc(t.desc)}</span>`;
     b.onclick = () => {
       pushHistory();
       applyTemplate(t);
       syncDocControls(); render(); save();
       if (!userZoomed) fit();
       toast('Modelo: ' + t.name);
+      if (afterApply) afterApply(true);
     };
     box.appendChild(b);
   });
+}
+
+/* ============ miniatura gráfica do modelo (painel "Modelos") ============
+   Reflete de fato tamanho/proporção real (SIZES), paleta de cor (PALETTES),
+   posição da foto do estilo escolhido (MONTH_STYLES) e a encadernação — não
+   é um ícone genérico por trás do nome. */
+function tplThumbSVG(t) {
+  const s = t.settings || {};
+  const sz = SIZES[s.size] || SIZES.a4p;
+  const pal = PALETTES[s.palette] || PALETTES.esmeralda;
+  const bind = BINDING_TYPES[s.binding] || BINDING_TYPES.none;
+  const W = 100, H = Math.round(W * (sz.h / sz.w));
+  const R = 5;
+  // margem reservada para a encadernação (topo/esquerda), como no documento real
+  const bindPad = bind.edge === 'top' ? 8 : bind.edge === 'left' ? 8 : 0;
+  const ax = bindPad && bind.edge === 'left' ? bindPad : 0;
+  const ay = bindPad && bind.edge === 'top' ? bindPad : 0;
+  const cw = W - ax, ch = H - ay;
+  const photo = `fill="${pal.accent}" opacity=".55"`;
+  let scene = '';
+  const style = s.style || 'sografe';
+  if (style === 'fotofundo') {
+    scene += `<rect x="${ax}" y="${ay}" width="${cw}" height="${ch}" ${photo}/>`;
+    scene += `<rect x="${ax + cw * 0.08}" y="${ay + ch * 0.42}" width="${cw * 0.84}" height="${ch * 0.5}" rx="2" fill="${pal.paperBg}" opacity=".88"/>`;
+    scene += tplGrid(ax + cw * 0.13, ay + ch * 0.48, cw * 0.74, ch * 0.38, pal.ink);
+  } else if (style === 'fototopo') {
+    scene += `<rect x="${ax}" y="${ay}" width="${cw}" height="${ch * 0.42}" ${photo}/>`;
+    scene += tplGrid(ax + cw * 0.06, ay + ch * 0.5, cw * 0.88, ch * 0.42, pal.ink);
+  } else if (style === 'fotolado') {
+    scene += `<rect x="${ax}" y="${ay}" width="${cw * 0.34}" height="${ch}" ${photo}/>`;
+    scene += tplGrid(ax + cw * 0.42, ay + ch * 0.08, cw * 0.52, ch * 0.84, pal.ink);
+  } else if (style === 'fotocanto') {
+    scene += tplGrid(ax + cw * 0.06, ay + ch * 0.06, cw * 0.88, ch * 0.88, pal.ink);
+    scene += `<rect x="${ax + cw * 0.06}" y="${ay + ch * 0.06}" width="${cw * 0.26}" height="${ch * 0.2}" rx="1.5" ${photo}/>`;
+  } else if (style === 'moldura') {
+    scene += `<rect x="${ax}" y="${ay}" width="${cw}" height="${ch}" ${photo}/>`;
+    scene += `<rect x="${ax + 3}" y="${ay + 3}" width="${cw - 6}" height="${ch - 6}" fill="none" stroke="${pal.paperBg}" stroke-width="1.4"/>`;
+    scene += `<rect x="${ax + cw * 0.16}" y="${ay + ch * 0.34}" width="${cw * 0.68}" height="${ch * 0.44}" rx="2" fill="${pal.paperBg}" opacity=".92"/>`;
+    scene += tplGrid(ax + cw * 0.21, ay + ch * 0.4, cw * 0.58, ch * 0.32, pal.ink);
+  } else { // sografe
+    scene += `<rect x="${ax}" y="${ay}" width="${cw}" height="${ch * 0.16}" fill="${pal.ink}" opacity=".85"/>`;
+    scene += tplGrid(ax + cw * 0.07, ay + ch * 0.24, cw * 0.86, ch * 0.68, pal.ink);
+  }
+  let bindMarks = '';
+  if (bind.edge === 'top') {
+    const n = 6, gap = W / (n + 1);
+    for (let i = 1; i <= n; i++) bindMarks += `<circle cx="${(gap * i).toFixed(1)}" cy="${bindPad / 2}" r="1.3" fill="#fff" stroke="rgba(0,0,0,.3)" stroke-width=".5"/>`;
+  } else if (bind.edge === 'left') {
+    const n = 5, gap = H / (n + 1);
+    for (let i = 1; i <= n; i++) bindMarks += `<circle cx="${bindPad / 2}" cy="${(gap * i).toFixed(1)}" r="1.3" fill="#fff" stroke="rgba(0,0,0,.3)" stroke-width=".5"/>`;
+  } else if (s.binding === 'corner') {
+    bindMarks += `<path d="M${W - 10} 0 L${W} 0 L${W} 10 Z" fill="none" stroke="rgba(0,0,0,.35)" stroke-width="1"/>`;
+  }
+  const cid = 'tc-' + t.id;
+  return `<svg viewBox="0 0 ${W} ${H}" aria-hidden="true">
+    <defs><clipPath id="${cid}"><rect x="0" y="0" width="${W}" height="${H}" rx="${R}"/></clipPath></defs>
+    <g clip-path="url(#${cid})">
+      <rect x="0" y="0" width="${W}" height="${H}" fill="${pal.paperBg}"/>
+      ${scene}${bindMarks}
+      <rect x=".5" y=".5" width="${W - 1}" height="${H - 1}" rx="${R}" fill="none" stroke="rgba(0,0,0,.12)" stroke-width="1"/>
+    </g>
+  </svg>`;
+}
+function tplGrid(x, y, w, h, ink) {
+  const cols = 7, rows = 5, gap = 1;
+  const cw = (w - gap * (cols - 1)) / cols, ch = (h - gap * (rows - 1)) / rows;
+  let out = '';
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++)
+    out += `<rect x="${(x + c * (cw + gap)).toFixed(1)}" y="${(y + r * (ch + gap)).toFixed(1)}" width="${cw.toFixed(1)}" height="${ch.toFixed(1)}" fill="none" stroke="${ink}" stroke-width=".6" opacity=".55"/>`;
+  return out;
 }
 
 /* ================= lista de páginas (esquerda) ================= */
@@ -325,7 +402,7 @@ function bindBar() {
   $('#m_pdf').onclick = () => { mclose(); exportPDF(); };
   $('#m_png').onclick = () => { mclose(); exportPNG(); };
   $('#m_print').onclick = () => { mclose(); printDoc(); };
-  $('#m_new').onclick = () => { mclose(); if (confirm('Começar um novo calendário? O atual será descartado.')) { newDoc(); syncDocControls(); render(); save(); fit(); toast('Novo calendário.'); } };
+  $('#m_new').onclick = () => { mclose(); if (confirm('Começar um novo calendário? O atual será descartado.')) { newDoc(); syncDocControls(); render(); save(); fit(); enterOnboarding(); } };
   $('#m_save').onclick = () => { mclose(); exportProject(); };
   $('#m_open').onclick = () => { mclose(); $('#file_open').click(); };
   $('#m_help').onclick = () => { mclose(); $('#help').showModal(); };
@@ -333,12 +410,15 @@ function bindBar() {
   $('#m_about').onclick = () => { mclose(); $('#about').showModal(); };
   $('#m_install') && ($('#m_install').onclick = () => { mclose(); if (typeof doInstall === 'function') doInstall(); });
   $$('[data-close]').forEach(b => b.onclick = () => b.closest('dialog').close());
-  $('#p_wipe').onclick = () => { if (confirm('Apagar o calendário e as configurações guardadas neste navegador?')) { try { localStorage.removeItem(KEY); localStorage.removeItem(UIKEY); } catch (e) {} newDoc(); syncDocControls(); render(); save(); try { $('#privacy').close(); } catch (e) {} toast('Tudo apagado.'); } };
+  $('#p_wipe').onclick = () => { if (confirm('Apagar o calendário e as configurações guardadas neste navegador?')) { try { localStorage.removeItem(KEY); localStorage.removeItem(UIKEY); } catch (e) {} newDoc(); syncDocControls(); render(); save(); try { $('#privacy').close(); } catch (e) {} enterOnboarding(); } };
   $('#file_open').addEventListener('change', e => { if (e.target.files[0]) importProject(e.target.files[0]); e.target.value = ''; });
 
   if (ACERVO_URL) {
     const bl = $('#brandLink'); bl.href = ACERVO_URL; bl.target = '_blank';
     const ma = $('#m_acervo'); if (ma) { ma.href = ACERVO_URL; ma.target = '_blank'; ma.hidden = false; }
+  }
+  if (typeof FEEDBACK_URL !== 'undefined' && FEEDBACK_URL) {
+    const mf = $('#m_feedback'); if (mf) { mf.href = FEEDBACK_URL; mf.target = '_blank'; mf.hidden = false; }
   }
 }
 let _menuScrimEl = null;
@@ -436,9 +516,24 @@ function bindGlobal() {
   if (typeof initInstall === 'function') initInstall();
   setupColorFields();
   load();
-  syncDocControls();
-  applyUI();
-  render();
-  fit();
-  injectIcons();
+  const hasSaved = !!state.onboarded;
+  let alreadyAsked = false;
+  try { alreadyAsked = sessionStorage.getItem('calendarstudio-resumed') === '1'; } catch (e) {}
+  if (hasSaved && !alreadyAsked) showResumeAsk(); else finishInit();
+  function finishInit() { syncDocControls(); applyUI(); render(); fit(); injectIcons(); }
+  function markAsked() { try { sessionStorage.setItem('calendarstudio-resumed', '1'); } catch (e) {} }
+  function showResumeAsk() {
+    const box = $('#resumeAsk'); if (!box) { finishInit(); return; }
+    const withPhoto = state.months.filter(m => m.photo).length;
+    $('#ra_desc').textContent = `Encontramos um calendário salvo neste navegador — ${state.settings.year}` + (withPhoto ? `, ${withPhoto} ${withPhoto === 1 ? 'mês' : 'meses'} com foto.` : '.');
+    box.hidden = false;
+    document.body.classList.add('onboarding');
+    $('#ra_continue').onclick = () => { markAsked(); box.hidden = true; document.body.classList.remove('onboarding'); finishInit(); };
+    $('#ra_new').onclick = () => {
+      if (!confirm('Começar um novo calendário? O salvo continuará guardado até você mudar algo.')) return;
+      markAsked(); box.hidden = true;
+      newDoc(); syncDocControls(); render(); save(); fit();
+      enterOnboarding();
+    };
+  }
 })();

@@ -96,6 +96,7 @@ function iconSVG(name) {
 }
 
 const ACERVO_URL = 'https://www.esmeraldapaper.com.br/ferramentas/';
+const FEEDBACK_URL = 'https://www.esmeraldapaper.com.br/avaliar-ferramentas/?tool=calendar';
 
 /* ---------- tamanhos (mm) ---------- */
 const SIZES = {

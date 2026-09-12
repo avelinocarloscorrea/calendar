@@ -1,0 +1,38 @@
+# Histórico
+
+## 0.5 — assistente de início
+- Tela de início nova: ao abrir um calendário do zero, você escolhe em 4
+  passos (tamanho → estilo do mês → paleta → encadernação) e já vê a prévia
+  de cada escolha. Continua dando para pular direto para um dos modelos
+  prontos.
+
+## 0.4 — exportar já pronto para cortar
+- **Modo automático** de exportação (agora o padrão): ao gerar o PDF ou
+  imprimir, a ferramenta decide sozinha se o tamanho escolhido sai exato ou
+  centralizado numa folha A4 com marcas de corte — sem precisar configurar
+  nada antes. Continua dando para escolher manualmente se preferir mandar
+  para a gráfica num tamanho exato.
+
+## 0.3 — editor de foto embutido, encadernação e mais modelos
+- **Editor de foto** direto no painel (arrastar, zoom, rotação, espelhar,
+  brilho/contraste/saturação/sépia/preto-e-branco), com dois presets rápidos
+  — **Básico** e **Clássico** — para a capa e a foto de cada mês. Sem popup:
+  os controles ficam ao lado, editando ao vivo, e a foto reabre exatamente
+  como você deixou.
+- **Encadernação de verdade**: wire-o (topo ou lateral), espiral ou canto —
+  a grade do mês desvia da faixa do furo, com estimativa de espessura do
+  miolo. Tamanho **mesa cavalete** dobra a folha automaticamente na hora de
+  exportar.
+- +2 estilos de mês (moldura decorativa, foto no canto), +2 tamanhos (ímã de
+  geladeira, mesa cavalete), 8 modelos completos prontos para aplicar.
+- O painel direito volta a abrir sozinho ao trocar de mês, se estava
+  fechado.
+- Corrigido um bug real: uma foto recém-adicionada, sem nenhum ajuste ainda,
+  aparecia com zoom/rotação/saturação nos valores mínimos em vez dos
+  valores neutros.
+
+## 0.1 — primeira versão
+- Calendário com capa + 12 meses, 6 estilos de página e feriados nacionais,
+  estaduais e comemorativos calculados localmente. Exportação em PDF
+  vetorial, PNG ou impressão direta. Nada é enviado a servidor nenhum — fotos
+  e projeto ficam só no navegador.

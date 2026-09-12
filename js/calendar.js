@@ -20,7 +20,7 @@ function normPhotoEdit(v) {
 
 /* ================= estado / migração ================= */
 function newState() {
-  return { schema: 1, settings: { ...DEFAULTS }, months: Array.from({ length: 12 }, emptyMonth) };
+  return { schema: 1, onboarded: false, settings: { ...DEFAULTS }, months: Array.from({ length: 12 }, emptyMonth) };
 }
 function migrate(raw) {
   const src = (raw && typeof raw === 'object') ? raw : {};
@@ -71,7 +71,9 @@ function migrate(raw) {
       caption: sanitizeText(m.caption, 120),
     };
   });
-  return { schema: 1, settings, months };
+  // um state migrado sempre já existia antes (sessão anterior ou projeto
+  // importado) — não faz sentido mostrar a tela de início de novo.
+  return { schema: 1, onboarded: src.onboarded !== false, settings, months };
 }
 
 /* ================= persistência ================= */

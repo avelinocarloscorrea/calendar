@@ -7,6 +7,11 @@
 @media (max-width:820px){
   #app{display:none!important}
   #mroot{display:grid;grid-template-rows:auto 1fr auto;position:fixed;inset:0;background:var(--stage);z-index:5}
+  /* tela inicial sem menus: some com a barra de cima e as abas de baixo */
+  body.onboarding #mroot{grid-template-rows:0 1fr 0}
+  body.onboarding #mtop,body.onboarding #mtabs{overflow:hidden;visibility:hidden}
+  body.onboarding #mstageWrap #stage{padding:0}
+  body.onboarding #sheets{display:none}
 
   /* ---------- barra de cima ---------- */
   #mtop{display:flex;align-items:center;gap:6px;padding:8px 10px;background:var(--surface);

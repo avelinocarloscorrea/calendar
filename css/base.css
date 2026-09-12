@@ -7,9 +7,7 @@
 @font-face{font-family:'Arimo';font-style:italic;font-weight:400;font-display:swap;
   src:url(../assets/arimo-latin-400-italic.woff2) format('woff2')}
 
-/* Polaroide Studio — css/base.css  (fontes, tokens, resets, botões, campos) */
-/* Fontes servidas de assets/ (mesmo domínio). Latin-1 basta para o pt-BR.
-   As de legenda só baixam quando o usuário as escolhe (font-display:swap). */
+/* Fonte de marca (Playfair Display), servida de assets/ (mesmo domínio). */
 @font-face{
   font-family:'Playfair Display';font-style:normal;font-weight:400 800;font-display:swap;
   src:url(../assets/playfair.woff2) format('woff2');
