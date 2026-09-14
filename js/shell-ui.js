@@ -204,6 +204,36 @@ function buildStyleCards() {
     box.appendChild(b);
   });
 }
+// capas em cartões visuais (mesma ideia dos estilos de mês)
+function buildCoverCards() {
+  const box = $('#coverCards'); if (!box) return;
+  box.innerHTML = '';
+  const show = !!state.settings.showCover && !(SIZES[state.settings.size] || {}).layout;
+  box.hidden = !show; const lb = $('#coverCardsLbl'); if (lb) lb.hidden = !show;
+  if (!show) return;
+  Object.entries(COVER_STYLES_CAL).forEach(([k, label]) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'style-card' + ((state.settings.coverStyle || 'auto') === k ? ' on' : ''); b.dataset.v = k;
+    const svg = withTemplateState({ settings: { ...state.settings, coverStyle: k } }, () => {
+      const [W, H] = paperWH();
+      const pen = SvgPen(W, H, { bg: state.settings.paperBg });
+      drawPageInto(pen, { kind: 'cover' }, 0, { screen: false });
+      return pen.svg();
+    }, { photos: true });
+    b.innerHTML = `<span class="style-card__pv">${svg}</span><span class="style-card__lb">${esc(label)}</span>`;
+    b.onclick = () => { if ((state.settings.coverStyle || 'auto') === k) return; pushHistory(); state.settings.coverStyle = k; state.settings = migrate(state).settings; render(); save(); buildCoverCards(); };
+    box.appendChild(b);
+  });
+}
+let _coverSig = '';
+{
+  const _sc = syncStyleCards;
+  syncStyleCards = function () {
+    _sc.apply(this, arguments);
+    const s = state.settings, sig = [s.size, s.ink, s.accent, s.paperBg, s.binding, s.year, s.title, s.owner, s.coverPhoto.length, s.showCover, s.coverStyle, JSON.stringify(s.el || {})].join('|');
+    if (sig !== _coverSig) { _coverSig = sig; buildCoverCards(); }
+  };
+}
 let _styleSig = '';
 function syncStyleCards() {
   const s = state.settings, sig = [s.size, s.ink, s.accent, s.paperBg, s.binding, s.year, s.weekStart].join('|');

@@ -34,14 +34,14 @@
 <meta name="twitter:description" content="Gere um calendário personalizado com suas fotos e os feriados do Brasil, pronto para impressão — sem cadastro, sem enviar nada a servidor nenhum.">
 <link rel="preload" as="font" type="font/woff2" crossorigin href="assets/arimo-latin-400-normal.woff2">
 <link rel="preload" as="font" type="font/woff2" crossorigin href="assets/arimo-latin-700-normal.woff2">
-<link rel="stylesheet" href="css/base.css?v=260914144258">
-<link rel="stylesheet" href="css/layout.css?v=260914144258">
-<link rel="stylesheet" href="css/studio.css?v=260914144258">
-<link rel="stylesheet" href="css/util.css?v=260914144258">
-<link rel="stylesheet" href="css/print.css?v=260914144258">
-<link rel="stylesheet" href="css/mobile.css?v=260914144258">
-<link rel="stylesheet" href="vendor/core/fonts/fonts.css?v=260914144258">
-<link rel="stylesheet" href="vendor/core/shell.css?v=260914144258">
+<link rel="stylesheet" href="css/base.css?v=260914152953">
+<link rel="stylesheet" href="css/layout.css?v=260914152953">
+<link rel="stylesheet" href="css/studio.css?v=260914152953">
+<link rel="stylesheet" href="css/util.css?v=260914152953">
+<link rel="stylesheet" href="css/print.css?v=260914152953">
+<link rel="stylesheet" href="css/mobile.css?v=260914152953">
+<link rel="stylesheet" href="vendor/core/fonts/fonts.css?v=260914152953">
+<link rel="stylesheet" href="vendor/core/shell.css?v=260914152953">
 </head>
 <body class="booting">
 <div id="app">
@@ -100,12 +100,14 @@
           <div class="grp-title">Tamanho</div>
           <label>Formato <select id="d_size"></select></label>
           <label class="row"><input type="checkbox" id="d_showCover"> Incluir capa</label>
+          <span class="fld-lbl" id="coverCardsLbl">Estilo da capa</span><div id="coverCards" class="style-cards"></div>
         </div>
         <div class="grp-block">
           <div class="grp-title">Página do mês</div>
           <div id="styleCards" class="style-cards"></div>
           <label class="xp-src">Estilo <select id="d_style"></select></label>
           <p class="hint" id="d_styleHint"></p>
+          <div class="grp-block"><div class="grp-title">Textos e fotos na folha</div><p class="hint">Toque ou clique no título, no nome do mês, na legenda ou na foto <b>direto na página</b> para mover, mudar tamanho, fonte, cor e enquadrar.</p><button type="button" class="ep-linkbtn" id="d_resetSheet">Restaurar posições e estilos dos textos</button></div>
         </div>
       </section>
 
@@ -438,25 +440,27 @@
   </div>
 </dialog>
 
-<script defer src="vendor/core/dates.js?v=260914144258"></script>
-<script defer src="vendor/core/binding.js?v=260914144258"></script>
-<script defer src="vendor/core/imgedit.js?v=260914144258"></script>
-<script defer src="vendor/core/shell.js?v=260914144258"></script>
-<script defer src="js/config.js?v=260914144258"></script>
-<script defer src="vendor/core/fonts/metrics.js?v=260914144258"></script>
-<script defer src="vendor/core/ttf.js?v=260914144258"></script>
-<script defer src="vendor/core/jpeg.js?v=260914144258"></script>
-<script defer src="vendor/core/color.js?v=260914144258"></script>
-<script defer src="vendor/core/pdf.js?v=260914144258"></script>
-<script defer src="vendor/core/pen.js?v=260914144258"></script>
-<script defer src="vendor/core/print.js?v=260914144258"></script>
-<script defer src="js/images.js?v=260914144258"></script>
-<script defer src="js/calendar.js?v=260914144258"></script>
-<script defer src="js/io.js?v=260914144258"></script>
-<script defer src="js/mobile.js?v=260914144258"></script>
-<script defer src="js/install.js?v=260914144258"></script>
-<script defer src="js/ui.js?v=260914144258"></script>
-<script defer src="js/wizard.js?v=260914144258"></script>
-<script defer src="js/shell-ui.js?v=260914144258"></script>
+<script defer src="vendor/core/dates.js?v=260914152953"></script>
+<script defer src="vendor/core/binding.js?v=260914152953"></script>
+<script defer src="vendor/core/imgedit.js?v=260914152953"></script>
+<script defer src="vendor/core/shell.js?v=260914152953"></script>
+<script defer src="js/config.js?v=260914152953"></script>
+<script defer src="vendor/core/fonts/metrics.js?v=260914152953"></script>
+<script defer src="vendor/core/ttf.js?v=260914152953"></script>
+<script defer src="vendor/core/jpeg.js?v=260914152953"></script>
+<script defer src="vendor/core/color.js?v=260914152953"></script>
+<script defer src="vendor/core/pdf.js?v=260914152953"></script>
+<script defer src="vendor/core/pen.js?v=260914152953"></script>
+<script defer src="vendor/core/print.js?v=260914152953"></script>
+<script defer src="vendor/core/canvas-edit.js?v=260914152953"></script>
+<script defer src="js/images.js?v=260914152953"></script>
+<script defer src="js/calendar.js?v=260914152953"></script>
+<script defer src="js/io.js?v=260914152953"></script>
+<script defer src="js/mobile.js?v=260914152953"></script>
+<script defer src="js/install.js?v=260914152953"></script>
+<script defer src="js/ui.js?v=260914152953"></script>
+<script defer src="js/sheet-edit.js?v=260914152953"></script>
+<script defer src="js/wizard.js?v=260914152953"></script>
+<script defer src="js/shell-ui.js?v=260914152953"></script>
 </body>
 </html>
