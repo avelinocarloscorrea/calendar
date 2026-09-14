@@ -60,6 +60,13 @@ function migrate(raw) {
     exportMode: isStand ? 'real' : (['auto', 'real', 'fit'].indexOf(ds.exportMode) >= 0 ? ds.exportMode : DEFAULTS.exportMode),
     sheet: ds.sheet === 'a3' ? 'a3' : 'a4',
     exportDPI: clamp(Math.round(num(ds.exportDPI, DEFAULTS.exportDPI)), 150, 600),
+    startMonth: clamp(Math.round(num(ds.startMonth, 1)), 1, 12),
+    showMoon: !!ds.showMoon,
+    showWeekNum: !!ds.showWeekNum,
+    bleedMm: clamp(num(ds.bleedMm, 0), 0, 10),
+    cropMarks: ds.cropMarks !== false,
+    pdfColor: ds.pdfColor === 'cmyk' ? 'cmyk' : 'rgb',
+    inkSave: clamp(Math.round(num(ds.inkSave, 0)), 0, 60),
     acrylic: ds.acrylic !== false,
   };
   const mIn = Array.isArray(src.months) ? src.months : [];
@@ -183,10 +190,25 @@ function effectiveExportMode() {
 }
 
 /* ================= páginas ================= */
+// os 12 meses do calendário: a partir de startMonth (ano letivo ago–jul etc.)
+function spanMonths(s = state.settings) {
+  return Array.from({ length: 12 }, (_, k) => { const d = new Date(s.year, s.startMonth - 1 + k, 1); return { m: d.getMonth() + 1, y: d.getFullYear() }; });
+}
+function spanLabel(s = state.settings) {
+  const sp = spanMonths(s), a = sp[0], b = sp[11];
+  return a.y === b.y ? String(a.y) : `${MONTHS_SHORT[a.m - 1].toLowerCase()} ${a.y} – ${MONTHS_SHORT[b.m - 1].toLowerCase()} ${b.y}`;
+}
 function expand() {
+  const s = state.settings, size = SIZES[s.size] || {};
   const pages = [];
-  if (state.settings.showCover) pages.push({ kind: 'cover' });
-  for (let m = 1; m <= 12; m++) pages.push({ kind: 'month', m });
+  if (size.layout === 'year') {
+    if (size.pocket) pages.push({ kind: 'cover' });
+    pages.push({ kind: 'year', from: 0, count: 12 });
+    return pages;
+  }
+  if (s.showCover) pages.push({ kind: 'cover' });
+  if (size.layout === 'half') { pages.push({ kind: 'year', from: 0, count: 6 }, { kind: 'year', from: 6, count: 6 }); return pages; }
+  spanMonths(s).forEach(({ m, y }) => pages.push({ kind: 'month', m, y }));
   return pages;
 }
 function pageCount() { return expand().length; }
@@ -194,16 +216,41 @@ function curPage() { return expand()[clamp(currentPage, 0, pageCount() - 1)] || 
 
 /* ================= feriados / eventos ================= */
 let _holCache = null, _holSig = '';
+// feriados do ano anterior ao seguinte (calendário de ano letivo cruza a virada)
 function holidayIndex() {
   const s = state.settings;
   const sig = s.year + '|' + s.uf + '|' + s.holNacional + '|' + s.holFacultativo + '|' + s.holComemorativa;
   if (_holCache && _holSig === sig) return _holCache;
-  let list = EPDates.holidaysForYear(s.year, { uf: s.uf || null, includeOptional: s.holFacultativo, includeCommemorative: s.holComemorativa });
-  if (!s.holNacional) list = list.filter(h => h.type !== 'nacional');
   const map = Object.create(null);
-  list.forEach(h => { (map[h.ymd] || (map[h.ymd] = [])).push(h.name); });
+  for (let y = s.year - 1; y <= s.year + 1; y++) {
+    let list = EPDates.holidaysForYear(y, { uf: s.uf || null, includeOptional: s.holFacultativo, includeCommemorative: s.holComemorativa });
+    if (!s.holNacional) list = list.filter(h => h.type !== 'nacional');
+    list.forEach(h => { (map[h.ymd] || (map[h.ymd] = [])).push(h.name); });
+  }
   _holCache = map; _holSig = sig;
   return map;
+}
+// fases da lua por data (fuso de Brasília)
+let _moonCache = null, _moonSig = '';
+function moonIndex() {
+  const s = state.settings, sig = s.year + '';
+  if (_moonCache && _moonSig === sig) return _moonCache;
+  const map = Object.create(null);
+  EPDates.moonPhases(new Date(s.year - 1, 11, 1), new Date(s.year + 1, 11, 31)).forEach(p => { map[p.ymd] = p.phase; });
+  _moonCache = map; _moonSig = sig;
+  return map;
+}
+// símbolo da fase — como vista do hemisfério sul (Brasil): crescente iluminada à esquerda.
+// Convenção de calendário: parte escura preenchida.
+function drawMoon(pen, cx, cy, r, phase, col) {
+  const st = { stroke: col, w: Math.max(0.12, r * 0.14) };
+  if (phase === 0) { pen.circle(cx, cy, r, { fill: col }); return; }
+  pen.circle(cx, cy, r, st);
+  if (phase === 2) return;
+  const side = phase === 1 ? 1 : -1;              // escuro à direita no crescente, à esquerda no minguante
+  const pts = [];
+  for (let i = 0; i <= 16; i++) { const a = -Math.PI / 2 + Math.PI * i / 16; pts.push([cx + side * r * Math.cos(a), cy + r * Math.sin(a)]); }
+  pen.poly(pts, { fill: col });
 }
 let _evCache = null, _evSig = '';
 function eventIndex() {
@@ -224,9 +271,11 @@ function markOn(date) {
 /* ================= encadernação (reserva de margem + guia de furo) =================
    Aplicado à página INTEIRA (capa e meses) antes de calcular qualquer layout
    — assim nada desenhado pelo app entra na faixa onde o furo vai ser feito. */
+function bindMargin(b) { return Math.max(b.marginMm || 0, b.spec ? EPPrint.bindingMargin(b.spec) : 0); }
 function contentInset(box, bindingKey) {
-  const b = BINDING_TYPES[bindingKey] || BINDING_TYPES.none;
-  if (!b.edge || !b.marginMm) return { box, strip: null };
+  const b0 = BINDING_TYPES[bindingKey] || BINDING_TYPES.none;
+  if (!b0.edge || !b0.marginMm) return { box, strip: null };
+  const b = { edge: b0.edge, marginMm: bindMargin(b0) };
   if (b.edge === 'top') {
     return {
       box: { x: box.x, y: box.y + b.marginMm, w: box.w, h: box.h - b.marginMm },
@@ -250,13 +299,19 @@ function drawPunchGuide(pen, strip, bindingKey, opts) {
   const col = '#b23b2c';
   const boundary = { w: 0.2, color: col, dash: [1.4, 1.4] };
   const holeS = { stroke: col, w: 0.25 };
+  // furos na medida da máquina, fileira centralizada; wire-o de parede deixa o
+  // vão central do gancho (meia-lua de 12 mm) sem furos.
+  const hole = (cx, cy, h) => h.shape === 'rect' ? pen.rect(cx - h.w / 2, cy - h.h / 2, h.w, h.h, holeS) : pen.circle(cx, cy, h.r, holeS);
   if (b.edge === 'top') {
-    const cy = strip.y + strip.h / 2;
-    for (let x = strip.x + b.holeGap; x <= strip.x + strip.w - b.holeGap * 0.6; x += b.holeGap) pen.circle(x, cy, b.holeR, holeS);
+    const holes = EPPrint.holes(b.spec, strip.w), mid = strip.x + strip.w / 2;
+    holes.forEach(h => { const x = strip.x + h.t; if (b.hanger && Math.abs(x - mid) < 16) return; hole(x, strip.y + h.edge, h); });
+    if (b.hanger) {
+      const pts = []; for (let i = 0; i <= 16; i++) { const a = Math.PI * i / 16; pts.push([mid + 6 * Math.cos(a), strip.y + 6 * Math.sin(a)]); }
+      pen.poly(pts, { stroke: col, w: 0.25, close: false });
+    }
     pen.line(strip.x, strip.y + strip.h, strip.x + strip.w, strip.y + strip.h, boundary);
   } else {
-    const cx = strip.x + strip.w / 2;
-    for (let y = strip.y + b.holeGap; y <= strip.y + strip.h - b.holeGap * 0.6; y += b.holeGap) pen.circle(cx, y, b.holeR, holeS);
+    EPPrint.holes(b.spec, strip.h).forEach(h => hole(strip.x + h.edge, strip.y + h.t, h));
     pen.line(strip.x + strip.w, strip.y, strip.x + strip.w, strip.y + strip.h, boundary);
   }
 }
@@ -267,6 +322,19 @@ function drawStandBase(pen, box, s) {
   const cy = box.y + box.h / 2;
   pen.text('Esmeralda Paper', box.x + box.w / 2, cy - 2, { size: 9, family: 'serif', font: 'bold', color: mixHex(s.ink, s.paperBg, 0.55), align: 'c', baseline: 'middle' });
   pen.text('dobre e cole esta base', box.x + box.w / 2, cy + 6, { size: 6.5, family: 'sans', color: mixHex(s.ink, s.paperBg, 0.55), align: 'c', baseline: 'middle' });
+}
+
+/* ================= sangria =================
+   Durante o desenho de uma página com sangria, fundos e fotos que encostam na
+   borda da página avançam `b` mm para fora — o refile da gráfica não deixa
+   filete branco. */
+let BLEED = { b: 0, W: 0, H: 0 };
+function ext(r) {
+  const { b, W, H } = BLEED;
+  if (!b || !r) return r;
+  const t = 0.05, x0 = r.x <= t ? r.x - b : r.x, y0 = r.y <= t ? r.y - b : r.y;
+  const x1 = r.x + r.w >= W - t ? r.x + r.w + b : r.x + r.w, y1 = r.y + r.h >= H - t ? r.y + r.h + b : r.y + r.h;
+  return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
 }
 
 /* ================= cor ================= */
@@ -298,21 +366,21 @@ function drawCover(pen, box, s, opts) {
   const cx = box.x + w / 2;
   const title = s.title || 'Calendário';
   if (s.coverPhoto && pen.image) {
-    pen.image(s.coverPhoto, box.x, box.y, w, h, { fit: 'cover' });
+    { const e = ext(box); pen.image(s.coverPhoto, e.x, e.y, e.w, e.h, { fit: 'cover' }); }
     const bandH = clamp(h * 0.26, 34, 120);
     const by = box.y + h - bandH;
-    pen.rect(box.x, by, w, bandH, { fill: s.paperBg, fillOpacity: 0.94 });
+    { const e = ext({ x: box.x, y: by, w, h: bandH }); pen.rect(e.x, e.y, e.w, e.h, { fill: s.paperBg, fillOpacity: 0.94 }); }
     pen.rect(box.x, by, w, 0.9 * k, { fill: s.accent });
     const tSize = pen.fitText(title, w - 2 * pad, 40 * k, 12, false, 'serif');
     pen.text(title, cx, by + bandH * 0.4, { size: tSize, family: 'serif', color: s.ink, align: 'c', baseline: 'middle' });
-    const sub = [String(s.year), s.owner].filter(Boolean).join('  ·  ').toUpperCase();
+    const sub = [spanLabel(s), s.owner].filter(Boolean).join('  ·  ').toUpperCase();
     pen.text(sub, cx, by + bandH * 0.74, { size: clamp(10 * k, 6.5, 18), family: 'sans', color: s.accent, align: 'c', baseline: 'middle', font: 'bold', tracking: 0.9 * k });
     return;
   }
   // capa tipográfica (sem foto): ano grande + título + os 12 meses em miniatura
-  pen.rect(box.x, box.y, w, h, { fill: s.paperBg });
+  { const e = ext(box); pen.rect(e.x, e.y, e.w, e.h, { fill: s.paperBg }); }
   pen.rect(box.x + pad, box.y + pad, w - 2 * pad, h - 2 * pad, { stroke: mixHex(s.accent, s.paperBg, 0.35), w: 0.5 * Math.sqrt(k) });
-  const yr = String(s.year);
+  const yr = spanLabel(s);
   const ySize = pen.fitText(yr, w - 4 * pad, 150 * k, 24, true, 'sans');
   const yY = box.y + h * 0.3;
   pen.text(yr, cx, yY, { size: ySize, font: 'bold', family: 'sans', color: mixHex(s.accent, s.paperBg, 0.4), align: 'c', baseline: 'middle' });
@@ -327,13 +395,13 @@ function drawCover(pen, box, s, opts) {
   const cellW = gw / cols, cellH = gh / rows;
   if (cellH > 10 && cellW > 10) {
     const mk = clamp(Math.min(cellW, cellH) / 45, 0.35, 1.6);
-    for (let m = 1; m <= 12; m++) {
-      const c = (m - 1) % cols, r0 = Math.floor((m - 1) / cols);
+    spanMonths(s).forEach(({ m, y }, i) => {
+      const c = i % cols, r0 = Math.floor(i / cols);
       const gx = box.x + 2 * pad + c * cellW + cellW * 0.08, gy = gTop + r0 * cellH + cellH * 0.06;
       const iw = cellW * 0.84, ih = cellH * 0.86;
       pen.text(EPDates.MONTHS_PT[m - 1].toUpperCase(), gx, gy, { size: clamp(7 * mk * 1.4, 4, 11), font: 'bold', color: s.ink, baseline: 'top', tracking: 0.3 * mk });
-      miniMonth(pen, { x: gx, y: gy + 5 * mk * 1.4, w: iw, h: ih - 5 * mk * 1.4 }, s, m);
-    }
+      miniMonth(pen, { x: gx, y: gy + 5 * mk * 1.4, w: iw, h: ih - 5 * mk * 1.4 }, y === s.year ? s : { ...s, year: y }, m);
+    });
   }
   if (s.owner) pen.text(s.owner, cx, box.y + h - pad - 7 * k, { size: clamp(12 * k, 7, 22), font: 'it', family: 'serif', color: mixHex(s.ink, s.paperBg, 0.25), align: 'c', baseline: 'middle' });
 }
@@ -421,6 +489,12 @@ function drawMonthGrid(pen, r, s, m) {
   const startCol = order.indexOf(first.getDay());
   const dim = EPDates.daysInMonth(year, m);
   const rows = Math.ceil((startCol + dim) / 7);
+  // número da semana ISO 8601 numa coluna estreita à esquerda (opcional)
+  if (s.showWeekNum) {
+    const wc = Math.min(r.w * 0.06, 9);
+    r = { x: r.x + wc, y: r.y, w: r.w - wc, h: r.h };
+    r.weekCol = wc;
+  }
   const cw = r.w / 7;
   const headH = clamp(r.h * 0.07, 4, 12 * clamp(r.w / 190, 0.6, 2));
   const rh = (r.h - headH) / rows;
@@ -449,6 +523,16 @@ function drawMonthGrid(pen, r, s, m) {
   for (let i = startCol + dim, d = 1; i < rows * 7; i++, d++) {
     pen.text(String(d), r.x + (i % 7) * cw + npad, y0 + Math.floor(i / 7) * rh + npad, { size: numSize * 0.8, color: faint, baseline: 'top' });
   }
+  if (r.weekCol) {
+    const ws = clamp(Math.min(rh * 0.2, r.weekCol * 0.5) * PT, 3.5, 11);
+    for (let rr = 0; rr < rows; rr++) {
+      // semana da linha = semana ISO da quinta-feira daquela linha
+      const d0 = new Date(year, m - 1, 1 - startCol + rr * 7);
+      const thu = new Date(d0); thu.setDate(d0.getDate() + ((4 - d0.getDay() + 7) % 7));
+      pen.text(String(EPDates.isoWeek(thu)), r.x - r.weekCol / 2, y0 + rr * rh + npad, { size: ws, color: faint, align: 'c', baseline: 'top', family: 'sans' });
+    }
+  }
+  const moons = s.showMoon ? moonIndex() : null;
   for (let day = 1; day <= dim; day++) {
     const idx = startCol + day - 1, rr = Math.floor(idx / 7), cc = idx % 7;
     const cx = r.x + cc * cw, cy = y0 + rr * rh;
@@ -457,6 +541,15 @@ function drawMonthGrid(pen, r, s, m) {
     const mark = markOn(dt);
     const numColor = mark ? s.accent : (dow === 0 || dow === 6 ? mixHex(s.ink, s.paperBg, 0.25) : s.ink);
     pen.text(String(day), cx + npad, cy + npad, { size: numSize, color: numColor, font: mark ? 'bold' : undefined, baseline: 'top' });
+    let dotY = cy + npad + 0.8;
+    if (moons) {
+      const ph = moons[EPDates.dateToYmd(dt)];
+      if (ph != null) {
+        const mr = clamp(Math.min(cw, rh) * 0.075, 0.7, 3.2);
+        drawMoon(pen, cx + cw - npad - mr, cy + npad + mr, mr, ph, mixHex(s.ink, s.paperBg, 0.3));
+        dotY += 2 * mr + 0.8;
+      }
+    }
     if (mark) {
       const ms = clamp(numSize * 0.5, 3.6, 10);
       const lh = ms * 1.15 / PT;
@@ -465,7 +558,7 @@ function drawMonthGrid(pen, r, s, m) {
         let ly = cy + rh - npad - lines.length * lh;
         lines.forEach(line => { if (line) { pen.text(line, cx + npad, ly, { size: ms, color: s.accent, baseline: 'top' }); ly += lh; } });
       } else {
-        pen.dot(cx + cw - npad - 0.8, cy + npad + 0.8, 0.7, { fill: s.accent });
+        pen.dot(cx + cw - npad - 0.8, dotY, 0.7, { fill: s.accent });
       }
     }
   }
@@ -476,21 +569,23 @@ function drawMonthPage(pen, box, s, m, opts) {
   const mo = (state.months && state.months[m - 1]) || emptyMonth();
   const has = !!(mo.photo && pen.image);
   if (s.style === 'fotofundo' || s.style === 'moldura') {
-    if (has) pen.image(mo.photo, L.photoFull.x, L.photoFull.y, L.photoFull.w, L.photoFull.h, { fit: 'cover' });
-    else drawPhotoPlaceholder(pen, s.style === 'moldura' ? L.photoFull : { x: box.x, y: box.y, w: box.w, h: L.panel.y - box.y }, s, m, opts, true);
+    const pf = ext(L.photoFull);
+    if (has) pen.image(mo.photo, pf.x, pf.y, pf.w, pf.h, { fit: 'cover' });
+    else drawPhotoPlaceholder(pen, ext(s.style === 'moldura' ? L.photoFull : { x: box.x, y: box.y, w: box.w, h: L.panel.y - box.y }), s, m, opts, true);
     if (s.style === 'moldura') {
       const k = typeK(box);
       pen.rect(box.x + 5 * k, box.y + 5 * k, box.w - 10 * k, box.h - 10 * k, { stroke: has ? s.paperBg : s.accent, w: 0.6 * k });
       pen.rect(L.card.x, L.card.y, L.card.w, L.card.h, { fill: s.paperBg, fillOpacity: has ? 0.94 : 1, rx: 2 * k });
     } else {
-      pen.rect(L.panel.x, L.panel.y, L.panel.w, L.panel.h, { fill: s.paperBg, fillOpacity: has ? 0.92 : 1 });
+      const pn = ext(L.panel);
+      pen.rect(pn.x, pn.y, pn.w, pn.h, { fill: s.paperBg, fillOpacity: has ? 0.92 : 1 });
     }
   } else if (s.style === 'fotocanto') {
-    pen.rect(box.x, box.y, box.w, box.h, { fill: s.paperBg });
+    { const e = ext(box); pen.rect(e.x, e.y, e.w, e.h, { fill: s.paperBg }); }
     if (has) pen.image(mo.photo, L.photoThumb.x, L.photoThumb.y, L.photoThumb.w, L.photoThumb.h, { fit: 'cover' });
     else drawPhotoPlaceholder(pen, L.photoThumb, s, m, null, false);
   } else {
-    pen.rect(box.x, box.y, box.w, box.h, { fill: s.paperBg });
+    { const e = ext(box); pen.rect(e.x, e.y, e.w, e.h, { fill: s.paperBg }); }
     if (L.photo) {
       if (has) pen.image(mo.photo, L.photo.x, L.photo.y, L.photo.w, L.photo.h, { fit: 'cover' });
       else drawPhotoPlaceholder(pen, L.photo, s, m, opts, true);
@@ -500,21 +595,64 @@ function drawMonthPage(pen, box, s, m, opts) {
   drawMonthGrid(pen, L.grid, s, m);
 }
 
+// página com vários meses (pôster anual, econômico, verso do bolso)
+function drawYearPage(pen, box, s, pd, opts) {
+  const k = typeK(box), small = Math.min(box.w, box.h) < 110;
+  const pad = clamp(Math.min(box.w, box.h) * 0.04, 2.5, 16);
+  { const e = ext(box); pen.rect(e.x, e.y, e.w, e.h, { fill: s.paperBg }); }
+  let top = box.y + pad;
+  const span = spanMonths(s).slice(pd.from, pd.from + pd.count);
+  if (!small) {
+    const tH = clamp(box.h * 0.06, 10, 40);
+    const title = s.title || 'Calendário';
+    const tSize = pen.fitText(title, box.w * 0.62, tH * PT * 0.8, 9, false, 'serif');
+    pen.text(title, box.x + pad, top + tH / 2, { size: tSize, family: 'serif', color: s.ink, baseline: 'middle' });
+    const sub = pd.count < 12 ? `${EPDates.MONTHS_PT[span[0].m - 1]} – ${EPDates.MONTHS_PT[span[span.length - 1].m - 1]} ${span[span.length - 1].y}` : spanLabel(s);
+    pen.text(sub.toUpperCase(), box.x + box.w - pad, top + tH / 2, { size: clamp(tSize * 0.45, 6, 22), font: 'bold', family: 'sans', color: s.accent, align: 'r', baseline: 'middle', tracking: 0.5 * k });
+    pen.line(box.x + pad, top + tH + 1.5 * k, box.x + box.w - pad, top + tH + 1.5 * k, { w: 0.4 * k, color: s.accent });
+    top += tH + 5 * k;
+  }
+  const gw = box.w - 2 * pad, gh = box.y + box.h - pad - top;
+  // grade de meses que aproveita melhor o espaço (célula mais parecida com a proporção de um mês)
+  let best = null;
+  for (let cols = 1; cols <= pd.count; cols++) {
+    if (pd.count % cols && cols !== 4 && cols !== 3) continue;
+    const rows = Math.ceil(pd.count / cols), cwid = gw / cols, chei = gh / rows;
+    const score = Math.min(cwid, chei * 1.05);
+    if (!best || score > best.score) best = { cols, rows, score };
+  }
+  const gapX = clamp(gw * 0.025, 1.5, 12), gapY = gapX;
+  const cwid = (gw - gapX * (best.cols - 1)) / best.cols, chei = (gh - gapY * (best.rows - 1)) / best.rows;
+  span.forEach(({ m, y }, i) => {
+    const c = i % best.cols, rr = Math.floor(i / best.cols);
+    const x = box.x + pad + c * (cwid + gapX), yy = top + rr * (chei + gapY);
+    const hh = clamp(chei * 0.13, 2.5, 30);
+    const ss = y === s.year ? s : { ...s, year: y };
+    pen.text(EPDates.MONTHS_PT[m - 1] + (y !== s.year || pd.count === 12 && s.startMonth > 1 && m === 1 ? ' ' + y : ''), x, yy + hh / 2, { size: clamp(hh * 0.62 * PT, 4, 40), family: 'serif', color: s.ink, baseline: 'middle' });
+    drawMonthGrid(pen, { x, y: yy + hh + 0.5, w: cwid, h: chei - hh - 0.5 }, ss, m);
+  });
+}
+
 function drawPageInto(pen, pd, idx, opts = {}) {
   const s = state.settings, [W, H] = paperWH();
-  if (!opts.screen) pen.rect(0, 0, W, H, { fill: s.paperBg });
+  const b = Math.max(0, +opts.bleed || 0);
+  BLEED = { b, W, H };
+  if (!opts.screen) pen.rect(-b, -b, W + 2 * b, H + 2 * b, { fill: s.paperBg });
   const full = { x: 0, y: 0, w: W, h: H };
   const { box, strip } = contentInset(full, s.binding);
-  if (pd.kind === 'cover') drawCover(pen, box, s, opts);
-  else drawMonthPage(pen, box, s, pd.m, opts);
+  try {
+    if (pd.kind === 'cover') drawCover(pen, box, s, opts);
+    else if (pd.kind === 'year') drawYearPage(pen, box, s, pd, opts);
+    else drawMonthPage(pen, box, pd.y && pd.y !== s.year ? { ...s, year: pd.y } : s, pd.m, opts);
+  } finally { BLEED = { b: 0, W, H }; }
   if (strip) drawPunchGuide(pen, strip, s.binding, opts);
 }
 
 function pageSig(idx, pd) {
   const s = state.settings;
   const mo = pd.kind === 'month' ? state.months[pd.m - 1] : null;
-  return [idx, pd.kind, pd.m || 0, mo ? mo.photo.length + '|' + mo.caption : '',
-    s.year, s.weekStart, s.uf, s.holNacional, s.holFacultativo, s.holComemorativa, s.events,
+  return [idx, pd.kind, pd.m || 0, pd.y || 0, pd.from || 0, mo ? mo.photo.length + '|' + mo.caption : '',
+    s.year, s.startMonth, s.showMoon, s.showWeekNum, s.weekStart, s.uf, s.holNacional, s.holFacultativo, s.holComemorativa, s.events,
     s.ink, s.accent, s.paperBg, s.size, s.style, s.title, s.owner, s.showCover,
     s.coverPhoto.length, s.binding, s.showPunch].join('|');
 }

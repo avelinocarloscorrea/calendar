@@ -9,8 +9,7 @@
  *
  * Mapa:
  *   config.js    — utilitários, ícones, tamanhos, paletas, estilos, DEFAULTS
- *   pen.js       — "caneta" única que desenha em SVG (tela) e em PDF vetorial
- *   fonts.js     — Arimo embutida (export SVG->PNG)
+ *   vendor/core/pen.js — "caneta" única (SVG na tela, PDF com fontes incorporadas)
  *   images.js    — importar/sanitizar foto (tira EXIF/GPS, redimensiona)
  *   calendar.js  — estado, migração, expand() das páginas, desenho (capa/mês)
  *   io.js        — exportar PDF/PNG/impressão, salvar/abrir projeto .json
@@ -114,14 +113,20 @@ const SIZES = {
   a6l:    { label: 'Mesa A6 paisagem — 148 × 105 mm', w: 148, h: 105 },
   magnet: { label: 'Ímã de geladeira — 100 × 140 mm', w: 100, h: 140 },
   standee: { label: 'Mesa cavalete (dobra em 2) — face 148 × 105 mm', w: 148, h: 105, stand: true },
+  // 12 meses em poucas folhas
+  posterA3: { label: 'Pôster anual A3 — 12 meses numa folha', w: 297, h: 420, layout: 'year' },
+  posterA2: { label: 'Pôster anual A2 — 420 × 594 mm', w: 420, h: 594, layout: 'year' },
+  econA4:  { label: 'Econômico A4 — 6 meses por página', w: 210, h: 297, layout: 'half' },
+  pocket:  { label: 'Bolso — cartão 54 × 86 mm (frente e verso)', w: 54, h: 86, layout: 'year', pocket: true },
 };
 
 /* ---------- encadernação (reserva margem + guia de furo) ---------- */
 const BINDING_TYPES = {
   none:     { label: 'Sem encadernação (folha solta)', edge: null },
-  wireoTop: { label: 'Wire-o no topo (parede, pendurar)', edge: 'top', marginMm: 14, holeGap: 14, holeR: 1.6 },
-  wireoLeft:{ label: 'Wire-o lateral (mesa, folhear)', edge: 'left', marginMm: 14, holeGap: 14, holeR: 1.6 },
-  spiralTop:{ label: 'Espiral no topo', edge: 'top', marginMm: 12, holeGap: 10, holeR: 1.3 },
+  // furação pela norma (vendor/core/print.js): wire-o 3:1 = passo 8,47 mm, espiral 4:1 = 6,35 mm
+  wireoTop: { label: 'Wire-o no topo (parede, pendurar)', edge: 'top', marginMm: 14, spec: 'wireo31', hanger: true },
+  wireoLeft:{ label: 'Wire-o lateral (mesa, folhear)', edge: 'left', marginMm: 14, spec: 'wireo31' },
+  spiralTop:{ label: 'Espiral no topo', edge: 'top', marginMm: 12, spec: 'coil41' },
   corner:   { label: 'Grampo de canto (sem furo)', edge: null, marginMm: 0 },
 };
 
@@ -175,6 +180,13 @@ const DEFAULTS = {
   exportMode: 'auto',         // auto (decide sozinho) | real | fit
   sheet: 'a4',                // a4 | a3 (folha de saída p/ o modo "fit")
   exportDPI: 300,
+  startMonth: 1,              // 1–12: calendário de 12 meses a partir deste mês (ano letivo: 8)
+  showMoon: false,            // fases da lua nos dias
+  showWeekNum: false,         // número da semana ISO 8601 em cada linha
+  bleedMm: 0,                 // sangria (gráfica)
+  cropMarks: true,            // marcas de corte fora da sangria
+  pdfColor: 'rgb',            // rgb (casa) | cmyk (gráfica, PDF/X-4)
+  inkSave: 0,                 // % de economia de tinta
   acrylic: false,             // painéis de vidro translúcido (mesmo efeito do Polaroide Studio)
 };
 

@@ -1,7 +1,3 @@
-Núcleo compartilhado (dates.js, blocks.js, binding.js, imgedit.js).
-
-São os mesmos módulos usados pelas outras ferramentas Esmeralda Paper
-(Planner Studio, Polaroide Studio) — feriados/datas, o construtor de blocos,
-a estimativa de acabamento e o editor de foto embutido. Aqui ficam como cópia
-estática, direto na origem do app (mesma pasta, sem CDN nem build), pra manter
-a Content-Security-Policy `script-src 'self'`.
+GERADO POR build.sh — NÃO EDITE AQUI.
+Fonte: packages/core/  ·  cópia de: 2026-09-14T02:06:29Z
+Arquivos: dates.js blocks.js binding.js imgedit.js shell.js shell.css ttf.js jpeg.js color.js pdf.js pen.js print.js fonts/ icc/

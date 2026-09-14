@@ -263,7 +263,7 @@ async function addPhotosBatch(files) {
 }
 
 /* ================= Imprimir e baixar ================= */
-let xpIdx = 0, xpCards = null, xpSheetSeg = null;
+let xpIdx = 0, xpCards = null, xpSheetSeg = null, xpColorSeg = null;
 function xpSetup() {
   if (xpCards) return;
   xpCards = EPShell.optionCards($('#xp_modes'), $('#d_exportMode'), [
@@ -276,6 +276,7 @@ function xpSetup() {
     { v: 'real', title: 'Gráfica · tamanho exato', icon: shIcon('real'), desc: 'Cada página no tamanho final do calendário.' },
   ]);
   xpSheetSeg = EPShell.segmented($('#xp_sheet'), $('#d_sheet'));
+  xpColorSeg = EPShell.segmented($('#xp_color'), $('#d_pdfColor'));
   let t;
   $('#xp_body').addEventListener('change', () => { clearTimeout(t); t = setTimeout(xpRefresh, 30); });
 }
@@ -287,27 +288,25 @@ function xpRefresh() {
   const isStand = !!plan.stand, total = plan.sheets.length;
   if (xpCards) xpCards.build();
   if (xpSheetSeg) xpSheetSeg.sync();
+  if (xpColorSeg) xpColorSeg.sync();
   $('#xp_modesWrap').hidden = isStand;
   $('#d_sheetRow').hidden = s.exportMode !== 'fit' || isStand;
   xpIdx = clamp(xpIdx - (xpIdx % 2), 0, Math.max(0, total - 1 - ((total - 1) % 2)));
 
   const view = k => {
     const sh = plan.sheets[k]; if (!sh) return null;
-    const slots = [];
-    sh.slots.forEach(sl => {
-      const pen = SvgPen(W, H, { bg: s.paperBg });
-      drawPageInto(pen, pages[sl.src], sl.src, { screen: false });
-      slots.push({ x: sl.ox, y: sl.oy, w: W * sl.sc, h: H * sl.sc, svg: pen.svg(), num: sl.src + 1 });
-      if (isStand) {
-        const base = SvgPen(W, H, { bg: '#ffffff' });
-        drawStandBase(base, { x: 0, y: 0, w: W, h: H }, s);
-        slots.push({ x: sl.ox, y: sl.oy + H + plan.gap, w: W * sl.sc, h: H * sl.sc, svg: base.svg() });
-      }
+    // uma página só é desenhada uma vez por folha (cópias no bolso reaproveitam o SVG)
+    const cache = new Map();
+    const slots = sh.slots.map((sl, i) => {
+      const key = sl.src + (sl.base ? 'b' : '');
+      if (!cache.has(key)) { const pen = SvgPen(W, H, { bg: s.paperBg }); drawSlot(pen, pages, sl, plan); cache.set(key, pen.svg()); }
+      return { x: sl.ox, y: sl.oy, w: W * sl.sc, h: H * sl.sc, rot: sl.rot, svg: cache.get(key), num: sl.base || i ? null : sl.src + 1 };
     });
-    return EPShell.sheetSVG({ w: plan.sheetW, h: plan.sheetH, slots, trims: sh.trims, foldY: isStand ? H + plan.gap / 2 : null });
+    return EPShell.sheetSVG({ w: plan.sheetW, h: plan.sheetH, slots, marks: sh.marks, foldY: sh.foldY,
+      trimBox: sh.trimBox, bleedBox: sh.bleedBox, trimBoxes: sh.trimBoxes, guides: !isStand });
   };
   const a = view(xpIdx), b = view(xpIdx + 1);
-  const lbl = k => { const pd = pages[plan.sheets[k].slots[0].src]; return pd.kind === 'cover' ? 'Capa' : EPDates.MONTHS_PT[pd.m - 1]; };
+  const lbl = k => { const pd = pages[plan.sheets[k].slots[0].src]; return pd.kind === 'cover' ? (plan.duplex ? 'frente' : 'Capa') : pd.kind === 'year' ? (plan.duplex ? 'verso' : pd.count === 12 ? '12 meses' : `${EPDates.MONTHS_PT[spanMonths()[pd.from].m - 1]} a ${EPDates.MONTHS_PT[spanMonths()[pd.from + pd.count - 1].m - 1]}`) : EPDates.MONTHS_PT[pd.m - 1]; };
   const col = plan.sheetW > plan.sheetH * 1.05;
   $('#xp_preview').innerHTML = `<div class="ep-sheet__stage${col ? ' ep-sheet__stage--col' : ''}">` +
     (a ? `<div class="ep-sheet__page">${a}<span class="ep-sheet__cap">Folha ${xpIdx + 1} · ${lbl(xpIdx)}</span></div>` : '') +
@@ -321,12 +320,19 @@ function xpRefresh() {
     bt.onclick = () => { xpIdx = clamp(xpIdx + d, 0, total - 1); xpRefresh(); };
   });
   const sheetName = eff.mode === 'fit' ? (eff.sheet === 'a3' ? 'A3' : 'A4') : `${W.toFixed(0)}×${H.toFixed(0)} mm`;
-  $('#xp_summary').innerHTML = `<span class="big">${total}</span><span class="txt"><b>folhas ${esc(sheetName)}${isStand ? ' (face + base)' : ''}</b> · imprimir só a <b>frente</b></span>`;
-  $('#xp_sub').textContent = `${sizeShort(s.size)} · ${s.year} · ${n} páginas`;
+  const sidesTxt = plan.duplex ? `imprimir <b>frente e verso</b> (borda longa) · ${plan.copies} cartões por folha` : 'imprimir só a <b>frente</b>';
+  $('#xp_summary').innerHTML = `<span class="big">${plan.duplex ? Math.ceil(total / 2) : total}</span><span class="txt"><b>${(plan.duplex ? Math.ceil(total / 2) : total) === 1 ? 'folha' : 'folhas'} ${esc(sheetName)}${isStand ? ' (face + base)' : ''}</b> · ${sidesTxt}</span>`;
+  $('#xp_sub').textContent = `${sizeShort(s.size)} · ${spanLabel()} · ${n} ${n === 1 ? 'página' : 'páginas'}`;
 
   // ---- verificação ----
   const chk = [];
-  chk.push({ level: 'ok', text: `${n} páginas de <b>${W.toFixed(0)}×${H.toFixed(0)} mm</b>, feriados ${s.uf ? 'nacionais e de ' + s.uf : s.holNacional ? 'nacionais' : 'desligados'} marcados.` });
+  chk.push({ level: 'ok', text: `${n} ${n === 1 ? 'página' : 'páginas'} de <b>${W.toFixed(0)}×${H.toFixed(0)} mm</b>, feriados ${s.uf ? 'nacionais e de ' + s.uf : s.holNacional ? 'nacionais' : 'desligados'} marcados, fontes incorporadas.` });
+  if (s.pdfColor === 'cmyk') {
+    chk.push({ level: 'ok', text: 'Fotos e cores convertidas para <b>CMYK (FOGRA39)</b>, caixas de corte e sangria: <b>PDF/X-4</b>.' });
+    if (eff.mode === 'real' && !isStand && !(s.bleedMm >= 3) && s.style !== 'sografe')
+      chk.push({ level: 'warn', text: 'Para gráfica, use <b>3 mm de sangria</b>: fotos até a borda ficam sem filete branco no refile.',
+        action: { label: 'Usar 3 mm', fn: () => { state.settings.bleedMm = 3; state.settings = migrate(state).settings; syncDocControls(); save(); xpRefresh(); } } });
+  }
   const usesPhoto = s.style !== 'sografe';
   if (usesPhoto) {
     const missing = state.months.map((mo, i) => mo.photo ? null : EPDates.MONTHS_PT[i]).filter(Boolean);
@@ -336,15 +342,18 @@ function xpRefresh() {
     const L = monthLayout(s.style, { x: 0, y: 0, w: W, h: H });
     const box = L.photo || L.photoThumb || L.photoFull;
     const low = [];
-    state.months.forEach((mo, i) => { if (!mo.photo || !box) return; const d = photoDpi(mo, box.w, box.h); if (d != null && d < 150) low.push({ i, d }); });
+    state.months.forEach((mo, i) => { if (!mo.photo || !box) return; const d = photoDpi(mo, box.w, box.h); if (d != null && d < 200) low.push({ i, d }); });
+    const soft = [];
+    state.months.forEach((mo, i) => { if (!mo.photo || !box) return; const d = photoDpi(mo, box.w, box.h); if (d != null && d >= 200 && d < 300) soft.push({ i, d }); });
+    if (soft.length) chk.push({ level: 'info', text: `${soft.length === 1 ? 'Uma foto' : soft.length + ' fotos'} entre 200 e 300 dpi (${esc(soft.map(x => EPDates.MONTHS_PT[x.i]).slice(0, 3).join(', '))}): boa em casa; para gráfica o ideal é 300 dpi.` });
     if (low.length) chk.push({ level: 'bad', text: `Resolução baixa em <b>${low.map(x => EPDates.MONTHS_PT[x.i]).slice(0, 3).join(', ')}</b> (${low[0].d} dpi): a foto pode sair borrada. Use uma imagem maior ou diminua o zoom.`,
       action: { label: 'Ver', fn: () => { $('#exportDlg').close(); gotoPage(pages.findIndex(p => p.kind === 'month' && p.m === low[0].i + 1)); } } });
   }
   if (s.showCover && s.coverPhoto) { const cd = photoDpi({ photo: s.coverPhoto, photoSrc: s.coverPhotoSrc, photoEdit: s.coverPhotoEdit }, W, H); if (cd != null && cd < 150) chk.push({ level: 'bad', text: `Foto da capa com resolução baixa (${cd} dpi): pode sair borrada.`, action: { label: 'Ver', fn: () => { $('#exportDlg').close(); gotoPage(0); } } }); }
   if (s.showCover && !s.coverPhoto) chk.push({ level: 'info', text: 'Capa sem foto: sai com o ano em destaque e os 12 meses em miniatura.' });
   const bt = BINDING_TYPES[s.binding];
-  if (bt && bt.edge) chk.push({ level: 'info', text: `Margem de <b>${bt.marginMm} mm</b> reservada ${bt.edge === 'top' ? 'no topo' : 'na lateral'} para ${esc(bt.label.split(' (')[0].toLowerCase())}.` });
-  if (isStand) chk.push({ level: 'info', text: 'Cavalete: cada folha traz a face e a base. Dobre na linha tracejada e cole a base.' });
+  if (bt && bt.edge) chk.push({ level: 'info', text: `Margem de <b>${bindMargin(bt).toFixed(0)} mm</b> reservada ${bt.edge === 'top' ? 'no topo' : 'na lateral'} para ${esc(bt.label.split(' (')[0].toLowerCase())}.` });
+  if (isStand) chk.push({ level: 'info', text: 'Cavalete: cada folha traz a face e o verso (girado). Dobre na linha tracejada em tenda — as duas faces ficam de pé.' });
   const sc = plan.sheets[0] && plan.sheets[0].slots[0] ? plan.sheets[0].slots[0].sc : 1;
   if (sc < 0.985) chk.push({ level: 'warn', text: `As páginas saem reduzidas a <b>${Math.round(sc * 100)}%</b> para caber na folha.`, action: { label: 'Usar A3', fn: () => { $('#d_sheet').value = 'a3'; $('#d_sheet').dispatchEvent(new Event('change', { bubbles: true })); } } });
   EPShell.checklist($('#xp_check'), chk);
@@ -391,3 +400,11 @@ syncStyleCards();
 injectIcons();
 render();
 setStep(document.body.classList.contains('onboarding') ? 0 : 1);
+
+// folha de calibração (núcleo): régua de 100 mm, margem mínima, cinzas e cores
+{ const bc = document.getElementById('b_calib'); if (bc) bc.onclick = async () => {
+  busy('Gerando folha de calibração…');
+  try { const bytes = await EPPen.calibrationPdf({ color: state.settings.pdfColor }); downloadBlob(new Blob([bytes], { type: 'application/pdf' }), 'folha-de-calibracao.pdf'); }
+  catch (e) { console.error(e); toast('Erro ao gerar a folha de calibração.'); }
+  unbusy();
+}; }

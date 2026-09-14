@@ -7,65 +7,87 @@
 const OUT_SHEETS = { a4: [210, 297], a3: [297, 420] };
 function outSheet(id) { return OUT_SHEETS[id] || OUT_SHEETS.a4; }
 
-// "real": 1 folha = 1 página, tamanho exato do miolo — para a gráfica.
-// "fit": página centralizada numa folha comum + marcas de corte nos 4 cantos.
-// Qual dos dois roda é decidido por effectiveExportMode() (calendar.js) —
-// 'auto' (padrão) escolhe sozinho conforme o tamanho do calendário.
+/* ================== imposição ==================
+   Mesma matemática do Planner (vendor/core/print.js).
+   "real": 1 folha = 1 página no tamanho final; sangria opcional; marcas de
+           corte numa faixa FORA da sangria; TrimBox/BleedBox no PDF.
+   "fit":  página centralizada numa folha comum + marcas de corte. Peças
+           pequenas (cartão de bolso) são repetidas para aproveitar a folha,
+           com o verso espelhado para frente e verso.
+   Cavalete: face em cima e base embaixo GIRADA 180° — dobrada em tenda, as
+   duas faces ficam de pé (antes a de trás ficava de cabeça para baixo, A13).
+   Cada folha: { slots:[{src,ox,oy,sc,rot,base}], marks, foldX, foldY, trimBox, bleedBox } */
 function impositionPlan(nPages) {
   const s = state.settings, [W, H] = paperWH();
   const eff = effectiveExportMode();
   const mode = eff.mode === 'fit' ? 'fit' : 'real';
-  // mesa cavalete: a folha sai com o DOBRO da altura — face em cima, painel de
-  // apoio embaixo (drawStandBase, calendar.js), com uma faixa de dobra entre
-  // os dois. migrate() já garante que isso só acontece com exportMode 'real'.
-  const stand = !!(SIZES[s.size] && SIZES[s.size].stand);
-  if (mode === 'real') {
-    const gap = stand ? 6 : 0;
-    const sheetH = stand ? (H * 2 + gap) : H;
+  const P = EPPrint, size = SIZES[s.size] || {};
+  const stand = !!size.stand;
+  const bleed = stand ? 0 : Math.max(0, s.bleedMm || 0);
+  if (stand) {
+    const gap = 6, sheetH = H * 2 + gap;
     const sheets = [];
-    for (let i = 0; i < nPages; i++) sheets.push({ slots: [{ src: i, ox: 0, oy: 0, sc: 1 }], trims: [] });
-    return { mode, sheetW: W, sheetH, sheets, stand, gap, faceH: H };
+    for (let i = 0; i < nPages; i++) sheets.push({
+      slots: [{ src: i, ox: 0, oy: 0, sc: 1 }, { src: i, ox: 0, oy: H + gap, sc: 1, rot: 180, base: true }],
+      marks: [], foldX: null, foldY: H + gap / 2, trimBox: { x: 0, y: 0, w: W, h: sheetH } });
+    return { mode: 'real', paper: true, bleed: 0, sheetW: W, sheetH, sheets, stand, gap, faceH: H };
+  }
+  if (mode === 'real') {
+    const marks = !!s.cropMarks && bleed > 0;
+    const bx = P.boxes(W, H, { bleed, marks });
+    const segs = marks ? P.markSegments(bx.trim, { bleed }) : [];
+    const sheets = [];
+    for (let i = 0; i < nPages; i++) sheets.push({ slots: [{ src: i, ox: bx.slug, oy: bx.slug, sc: 1 }], marks: segs, trimBox: bx.trim, bleedBox: bx.bleed });
+    return { mode, paper: true, bleed, sheetW: bx.media.w, sheetH: bx.media.h, sheets };
   }
   const B = outSheet(eff.sheet);
+  // peças pequenas: várias por folha (máximo aproveitamento, girando se couber mais)
+  const grid = P.nUp(B[0], B[1], W, H, { margin: 5, marks: true, noRotate: true, lockSheet: false });
+  if (size.pocket || (grid.count >= 4 && W <= 105 && H <= 105)) {
+    const fw = grid.sheetW, fh = grid.sheetH;
+    const trimBoxes = grid.slots.map(g => ({ x: g.x, y: g.y, w: W, h: H }));
+    // linhas de corte compartilhadas: marcas nas bordas externas do bloco, uma por linha/coluna
+    const bxL = grid.slots[0].x, byT = grid.slots[0].y, bxR = bxL + grid.cols * W, byB = byT + grid.rows * H;
+    const segs = [], L = P.MARK.len, g = P.MARK.gap;
+    for (let c = 0; c <= grid.cols; c++) { const x = bxL + c * W; segs.push([x, byT - g, x, byT - g - L], [x, byB + g, x, byB + g + L]); }
+    for (let r = 0; r <= grid.rows; r++) { const y = byT + r * H; segs.push([bxL - g, y, bxL - g - L, y], [bxR + g, y, bxR + g + L, y]); }
+    const block = { x: bxL, y: byT, w: bxR - bxL, h: byB - byT };
+    const sheets = [];
+    for (let i = 0; i < nPages; i++) {
+      const back = size.pocket && i % 2 === 1;       // verso: espelhado para virar pela borda longa
+      sheets.push({ slots: grid.slots.map(gs => { const r = back ? P.backRect({ x: gs.x, y: gs.y, w: W, h: H }, fw, fh, 'long') : gs; return { src: i, ox: r.x, oy: r.y, sc: 1 }; }),
+        marks: segs, trimBox: block, bleedBox: block, trimBoxes });
+    }
+    return { mode, sheetW: fw, sheetH: fh, sheets, copies: grid.count, duplex: !!size.pocket };
+  }
   let sw = B[0], sh = B[1];
   if (W > sw || H > sh) { sw = B[1]; sh = B[0]; }
-  const sc = Math.min(1, (sw - 6) / W, (sh - 6) / H);
+  const reach = P.markReach();
+  const sc = Math.min(1, (sw - 2 * (bleed + reach)) / W, (sh - 2 * (bleed + reach)) / H);
   const pw = W * sc, ph = H * sc, ox = (sw - pw) / 2, oy = (sh - ph) / 2;
+  const trim = { x: ox, y: oy, w: pw, h: ph }, bl = { x: ox - bleed * sc, y: oy - bleed * sc, w: pw + 2 * bleed * sc, h: ph + 2 * bleed * sc };
+  const segs = P.markSegments(trim, { bleed: bleed * sc });
   const sheets = [];
-  for (let i = 0; i < nPages; i++) sheets.push({ slots: [{ src: i, ox, oy, sc }], trims: [[ox, oy, pw, ph]] });
-  return { mode, sheetW: sw, sheetH: sh, sheets };
+  for (let i = 0; i < nPages; i++) sheets.push({ slots: [{ src: i, ox, oy, sc }], marks: segs, trimBox: trim, bleedBox: bl });
+  return { mode, bleed, sheetW: sw, sheetH: sh, sheets, scale: sc };
 }
 function sheetFileTag(s) {
-  if (SIZES[s.size] && SIZES[s.size].stand) return '-cavalete';
+  const color = s.pdfColor === 'cmyk' ? '-grafica-CMYK' : '';
+  if (SIZES[s.size] && SIZES[s.size].stand) return '-cavalete' + color;
   const eff = effectiveExportMode();
-  return eff.mode === 'fit' ? '-' + (eff.sheet === 'a3' ? 'A3' : 'A4') + '-corte' : '';
+  return (eff.mode === 'fit' ? '-' + (eff.sheet === 'a3' ? 'A3' : 'A4') + '-corte' : '') + color;
 }
 function modeLabel(s) {
   if (SIZES[s.size] && SIZES[s.size].stand) return 'mesa cavalete — dobrar ao meio';
   const eff = effectiveExportMode();
-  const base = eff.mode === 'fit' ? `1 página por folha ${eff.sheet === 'a3' ? 'A3' : 'A4'} + marcas de corte` : 'tamanho real';
+  const base = eff.mode === 'fit' ? `folha ${eff.sheet === 'a3' ? 'A3' : 'A4'} + marcas de corte` : 'tamanho real';
   return eff.auto ? base + ' (automático)' : base;
 }
-
-function drawSheetMarks(pen, sheet) {
-  const L = 5, g = 2.2, o = { w: 0.15, color: '#000' };
-  (sheet.trims || []).forEach(([x, y, w, h]) => {
-    [[x, y, -1, -1], [x + w, y, 1, -1], [x, y + h, -1, 1], [x + w, y + h, 1, 1]].forEach(([px, py, dx, dy]) => {
-      pen.line(px + dx * g, py, px + dx * (g + L), py, o);
-      pen.line(px, py + dy * g, px, py + dy * (g + L), o);
-    });
-  });
-}
-function planMarksSVG(sheet) {
-  const L = 5, g = 2.2, w = 0.15;
-  const seg = (x1, y1, x2, y2) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#000" stroke-width="${w}"/>`;
-  let p = '';
-  (sheet.trims || []).forEach(([x, y, ww, hh]) => {
-    [[x, y, -1, -1], [x + ww, y, 1, -1], [x, y + hh, -1, 1], [x + ww, y + hh, 1, 1]].forEach(([px, py, dx, dy]) => {
-      p += seg(px + dx * g, py, px + dx * (g + L), py) + seg(px, py + dy * g, px, py + dy * (g + L));
-    });
-  });
-  return p ? `<svg class="pmarks" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${sheet.__sw} ${sheet.__sh}">${p}</svg>` : '';
+// desenha o conteúdo de um slot (página ou base do cavalete) — igual no PDF, prévia e impressão
+function drawSlot(pen, pages, slot, plan) {
+  const [W, H] = paperWH();
+  if (slot.base) { drawStandBase(pen, { x: 0, y: 0, w: W, h: H }, state.settings); return; }
+  drawPageInto(pen, pages[slot.src], slot.src, { screen: false, bleed: plan.bleed || 0 });
 }
 
 function docName() { return (state.settings.title || 'Calendario').replace(/[^\wÀ-ÿ .-]/g, '').trim().slice(0, 60); }
@@ -75,41 +97,20 @@ async function exportPDF() {
   if (typeof resetPdfImages === 'function') resetPdfImages();
   const s = state.settings, [W, H] = paperWH();
   const plan = impositionPlan(pages.length);
+  const cmyk = s.pdfColor === 'cmyk';
   busy('Gerando PDF — ' + plan.sheets.length + ' folha(s)…');
   await new Promise(r => setTimeout(r, 20));
   try {
-    const f = v => (+v).toFixed(3);
     const out = [];
     for (let si = 0; si < plan.sheets.length; si++) {
       const sheet = plan.sheets[si];
-      const bg = PdfPen(plan.sheetW, plan.sheetH, 0, 0);
-      bg.rect(0, 0, plan.sheetW, plan.sheetH, { fill: '#ffffff' });
-      let content = bg.stream();
-      for (const slot of sheet.slots) {
-        const sp = PdfPen(W, H, 0, 0);
-        drawPageInto(sp, pages[slot.src], slot.src, { screen: false });
-        const tx = slot.ox * PT, ty = (plan.sheetH - slot.oy - H * slot.sc) * PT;
-        content += '\nq ' + f(slot.sc) + ' 0 0 ' + f(slot.sc) + ' ' + f(tx) + ' ' + f(ty) + ' cm\n' + sp.stream() + '\nQ';
-        if (plan.stand) {
-          const base = PdfPen(W, H, 0, 0);
-          drawStandBase(base, { x: 0, y: 0, w: W, h: H }, s);
-          const ty2 = (plan.sheetH - (slot.oy + H + plan.gap) - H * slot.sc) * PT;
-          content += '\nq ' + f(slot.sc) + ' 0 0 ' + f(slot.sc) + ' ' + f(tx) + ' ' + f(ty2) + ' cm\n' + base.stream() + '\nQ';
-          const fold = PdfPen(plan.sheetW, plan.sheetH, 0, 0);
-          fold.line(0, H + plan.gap / 2, plan.sheetW, H + plan.gap / 2, { w: 0.25, color: '#888888', dash: [2, 2] });
-          content += '\n' + fold.stream();
-        }
-      }
-      const deco = PdfPen(plan.sheetW, plan.sheetH, 0, 0);
-      drawSheetMarks(deco, sheet);
-      content += '\n' + deco.stream();
-      out.push({ stream: content, wPt: plan.sheetW * PT, hPt: plan.sheetH * PT });
+      out.push(composeSheetPdf({ sheet, sheetW: plan.sheetW, sheetH: plan.sheetH, W, H, bg: '#ffffff', draw: (pen, slot) => drawSlot(pen, pages, slot, plan) }));
       if (si % 5 === 0) { busy('Folha ' + (si + 1) + ' / ' + plan.sheets.length + '…'); await new Promise(r => setTimeout(r, 0)); }
     }
-    busy('Montando o arquivo…'); await new Promise(r => setTimeout(r, 0));
-    const bytes = await buildPDF(out);
+    busy(cmyk ? 'Convertendo fotos e cores para CMYK (FOGRA39)…' : 'Incorporando fontes e montando o arquivo…'); await new Promise(r => setTimeout(r, 0));
+    const bytes = await buildPDF(out, { color: s.pdfColor, inkSave: (s.inkSave || 0) / 100, title: docName() || 'Calendário', creator: 'Calendar Studio — Esmeralda Paper' });
     downloadBlob(new Blob([bytes], { type: 'application/pdf' }), (docName() || 'calendario') + sheetFileTag(s) + '.pdf');
-    toast('PDF: ' + plan.sheets.length + ' folha(s) · ' + (bytes.length / 1024).toFixed(0) + ' KB · ' + modeLabel(s));
+    toast('PDF' + (cmyk ? ' para gráfica (CMYK · PDF/X-4)' : '') + ': ' + plan.sheets.length + ' folha(s) · ' + (bytes.length / 1024).toFixed(0) + ' KB · ' + modeLabel(s));
   } catch (e) { console.error(e); toast('Erro ao gerar o PDF.'); }
   unbusy();
 }
@@ -123,7 +124,7 @@ async function exportPNG() {
     const dpi = clamp(Math.round(num(state.settings.exportDPI, 300)), 150, 600);
     try { await document.fonts.ready; } catch (e) {}
     let svg = buildSVG(i, pages[i]);
-    if (typeof embeddedFontStyle === 'function') svg = svg.replace(/(<svg[^>]*>)/, '$1' + embeddedFontStyle());
+    { const fcss = await embeddedFontStyle(svg); svg = svg.replace(/(<svg[^>]*>)/, m => m + fcss); }
     const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
     const img = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = url; });
     const cv = document.createElement('canvas');
@@ -198,29 +199,13 @@ async function printDoc() {
     for (let si = 0; si < plan.sheets.length; si++) {
       const sheet = plan.sheets[si];
       const psheet = document.createElement('div'); psheet.className = 'psheet';
-      for (const slot of sheet.slots) {
+      const slots = sheet.slots.map(slot => {
         const pen = SvgPen(W, H, { bg: '#ffffff' });
-        drawPageInto(pen, pages[slot.src], slot.src, { screen: false });
-        const sl = document.createElement('div'); sl.className = 'pslot';
-        sl.style.left = n2(slot.ox) + 'mm'; sl.style.top = n2(slot.oy) + 'mm';
-        sl.style.width = n2(W * slot.sc) + 'mm'; sl.style.height = n2(H * slot.sc) + 'mm';
-        sl.innerHTML = pen.svg();
-        psheet.appendChild(sl);
-        if (plan.stand) {
-          const base = SvgPen(W, H, { bg: '#ffffff' });
-          drawStandBase(base, { x: 0, y: 0, w: W, h: H }, s);
-          const sl2 = document.createElement('div'); sl2.className = 'pslot';
-          sl2.style.left = n2(slot.ox) + 'mm'; sl2.style.top = n2(slot.oy + H + plan.gap) + 'mm';
-          sl2.style.width = n2(W * slot.sc) + 'mm'; sl2.style.height = n2(H * slot.sc) + 'mm';
-          sl2.innerHTML = base.svg();
-          psheet.appendChild(sl2);
-          psheet.insertAdjacentHTML('beforeend',
-            `<svg class="pmarks" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SW} ${SH}"><line x1="0" y1="${n2(H + plan.gap / 2)}" x2="${SW}" y2="${n2(H + plan.gap / 2)}" stroke="#888" stroke-width="0.25" stroke-dasharray="2 2"/></svg>`);
-        }
-      }
-      sheet.__sw = SW; sheet.__sh = SH;
-      const ms = planMarksSVG(sheet);
-      if (ms) psheet.insertAdjacentHTML('beforeend', ms);
+        drawSlot(pen, pages, slot, plan);
+        return { x: slot.ox, y: slot.oy, w: W * slot.sc, h: H * slot.sc, rot: slot.rot, svg: pen.svg() };
+      });
+      psheet.innerHTML = EPShell.sheetSVG({ w: plan.sheetW, h: plan.sheetH, slots, marks: sheet.marks, foldY: sheet.foldY, print: true })
+        .replace('class="ep-sheet__svg"', 'class="pmarks"');
       root.appendChild(psheet);
     }
     document.body.appendChild(root);
@@ -246,11 +231,16 @@ function exportProject() {
     toast('Projeto salvo.');
   } catch (e) { toast('Erro ao salvar o projeto.'); }
 }
+const PRESET_DROP = ['title', 'owner', 'coverPhoto', 'coverPhotoSrc', 'coverPhotoEdit', 'events'];
 async function importProject(file) {
   if (file.size > 250 * 1024 * 1024) { alert('Arquivo grande demais para um projeto do Calendar Studio.'); return; }
   busy('Abrindo projeto…');
   try {
     const d = JSON.parse(await file.text());
+    if (d && d.preset === true && d.settings && typeof d.settings === 'object') {
+      pushHistory(); state = migrate({ ...state, settings: { ...state.settings, ...d.settings } });
+      syncDocControls(); render(); save(); fit(); toast('Predefinição aplicada.'); unbusy(); return;
+    }
     const st = d && d.state ? d.state : d;
     if (!st || typeof st !== 'object') throw new Error('estrutura');
     state = migrate(st);

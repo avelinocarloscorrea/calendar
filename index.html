@@ -34,13 +34,14 @@
 <meta name="twitter:description" content="Gere um calendário personalizado com suas fotos e os feriados do Brasil, pronto para impressão — sem cadastro, sem enviar nada a servidor nenhum.">
 <link rel="preload" as="font" type="font/woff2" crossorigin href="assets/arimo-latin-400-normal.woff2">
 <link rel="preload" as="font" type="font/woff2" crossorigin href="assets/arimo-latin-700-normal.woff2">
-<link rel="stylesheet" href="css/base.css?v=260914001751">
-<link rel="stylesheet" href="css/layout.css?v=260914001751">
-<link rel="stylesheet" href="css/studio.css?v=260914001751">
-<link rel="stylesheet" href="css/util.css?v=260914001751">
-<link rel="stylesheet" href="css/print.css?v=260914001751">
-<link rel="stylesheet" href="css/mobile.css?v=260914001751">
-<link rel="stylesheet" href="vendor/core/shell.css?v=260914001751">
+<link rel="stylesheet" href="css/base.css?v=260914021039">
+<link rel="stylesheet" href="css/layout.css?v=260914021039">
+<link rel="stylesheet" href="css/studio.css?v=260914021039">
+<link rel="stylesheet" href="css/util.css?v=260914021039">
+<link rel="stylesheet" href="css/print.css?v=260914021039">
+<link rel="stylesheet" href="css/mobile.css?v=260914021039">
+<link rel="stylesheet" href="vendor/core/fonts/fonts.css?v=260914021039">
+<link rel="stylesheet" href="vendor/core/shell.css?v=260914021039">
 </head>
 <body>
 <div id="app">
@@ -116,6 +117,9 @@
             <label>Ano <input type="number" id="d_year" min="1900" max="2200" step="1"></label>
             <label>Semana começa <select id="d_week"><option value="mon">Segunda</option><option value="sun">Domingo</option></select></label>
           </div>
+          <label>Começa em <select id="d_startMonth"></select></label>
+          <label class="row"><input type="checkbox" id="d_weeknum"> Número da semana (ISO 8601)</label>
+          <label class="row"><input type="checkbox" id="d_moon"> Fases da lua</label>
         </div>
         <div class="grp-block">
           <div class="grp-title">Feriados e datas especiais</div>
@@ -315,6 +319,7 @@
   <button id="m_new" data-i="filenew">Novo calendário…</button>
   <button id="m_save" data-i="save">Salvar projeto (.json)</button>
   <button id="m_open" data-i="folder">Abrir projeto…</button>
+  <button id="m_preset" data-i="save">Salvar predefinição (só ajustes)</button>
   <button id="m_history" data-i="clock">Histórico de alterações</button>
   <div class="msep"></div>
   <div class="menu-h">Exportar</div>
@@ -349,6 +354,10 @@
             <option value="real">Tamanho exato</option>
           </select>
           <select id="d_sheet"><option value="a4">A4</option><option value="a3">A3</option></select>
+          <select id="d_pdfColor">
+            <option value="rgb" data-short="Casa (RGB)">Impressora de casa — RGB</option>
+            <option value="cmyk" data-short="Gráfica (CMYK)">Gráfica — CMYK FOGRA39 · PDF/X-4</option>
+          </select>
         </div>
         <div class="xp-sec" id="xp_modesWrap">
           <div class="xp-h">Onde e como vai imprimir?</div>
@@ -359,6 +368,10 @@
           <div id="xp_sheet"></div>
         </div>
         <div class="xp-sec">
+          <span class="fld-lbl">Arquivo para</span>
+          <div id="xp_color"></div>
+        </div>
+        <div class="xp-sec">
           <div class="xp-h">Na hora de imprimir</div>
           <p class="xp-how" id="d_exportHint"></p>
         </div>
@@ -366,7 +379,12 @@
           <div class="xp-h">Verificação</div>
           <ul id="xp_check"></ul>
         </div>
-        <details class="xp-adv"><summary>Imagem (PNG)</summary><div class="sect">
+        <details class="xp-adv"><summary>Opções para gráfica e imagem</summary><div class="sect">
+          <label>Sangria (bleed) <span class="v" id="v_bleed"></span><input type="range" id="d_bleed" min="0" max="10" step="0.5"></label>
+          <label class="row"><input type="checkbox" id="d_crop"> Marcas de corte (fora da sangria)</label>
+          <label>Economia de tinta <span class="v" id="v_ink"></span><input type="range" id="d_inkSave" min="0" max="60" step="5"></label>
+          <p class="hint">Sangria estende fotos e fundos 3 mm além do corte, como as gráficas pedem. No PDF para gráfica, cores e fotos vão em <b>CMYK FOGRA39</b>, com fontes incorporadas (PDF/X-4).</p>
+          <button type="button" id="b_calib" class="wfull ghost">Baixar folha de calibração (PDF)</button>
           <label>Resolução do PNG
             <select id="d_dpi"><option value="200">200 dpi</option><option value="300">300 dpi</option><option value="450">450 dpi</option><option value="600">600 dpi</option></select></label>
         </div></details>
@@ -419,20 +437,25 @@
   </div>
 </dialog>
 
-<script defer src="vendor/core/dates.js?v=260914001751"></script>
-<script defer src="vendor/core/binding.js?v=260914001751"></script>
-<script defer src="vendor/core/imgedit.js?v=260914001751"></script>
-<script defer src="vendor/core/shell.js?v=260914001751"></script>
-<script defer src="js/config.js?v=260914001751"></script>
-<script defer src="js/pen.js?v=260914001751"></script>
-<script defer src="js/fonts.js?v=260914001751"></script>
-<script defer src="js/images.js?v=260914001751"></script>
-<script defer src="js/calendar.js?v=260914001751"></script>
-<script defer src="js/io.js?v=260914001751"></script>
-<script defer src="js/mobile.js?v=260914001751"></script>
-<script defer src="js/install.js?v=260914001751"></script>
-<script defer src="js/ui.js?v=260914001751"></script>
-<script defer src="js/wizard.js?v=260914001751"></script>
-<script defer src="js/shell-ui.js?v=260914001751"></script>
+<script defer src="vendor/core/dates.js?v=260914021039"></script>
+<script defer src="vendor/core/binding.js?v=260914021039"></script>
+<script defer src="vendor/core/imgedit.js?v=260914021039"></script>
+<script defer src="vendor/core/shell.js?v=260914021039"></script>
+<script defer src="js/config.js?v=260914021039"></script>
+<script defer src="vendor/core/fonts/metrics.js?v=260914021039"></script>
+<script defer src="vendor/core/ttf.js?v=260914021039"></script>
+<script defer src="vendor/core/jpeg.js?v=260914021039"></script>
+<script defer src="vendor/core/color.js?v=260914021039"></script>
+<script defer src="vendor/core/pdf.js?v=260914021039"></script>
+<script defer src="vendor/core/pen.js?v=260914021039"></script>
+<script defer src="vendor/core/print.js?v=260914021039"></script>
+<script defer src="js/images.js?v=260914021039"></script>
+<script defer src="js/calendar.js?v=260914021039"></script>
+<script defer src="js/io.js?v=260914021039"></script>
+<script defer src="js/mobile.js?v=260914021039"></script>
+<script defer src="js/install.js?v=260914021039"></script>
+<script defer src="js/ui.js?v=260914021039"></script>
+<script defer src="js/wizard.js?v=260914021039"></script>
+<script defer src="js/shell-ui.js?v=260914021039"></script>
 </body>
 </html>

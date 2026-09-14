@@ -32,6 +32,12 @@ function syncDocControls() {
   chk('#d_showCover', s.showCover);
   set('#d_year', s.year);
   set('#d_week', s.weekStart);
+  set('#d_startMonth', s.startMonth);
+  chk('#d_moon', s.showMoon); chk('#d_weeknum', s.showWeekNum);
+  { const e = $('#d_bleed'); if (e) { e.value = s.bleedMm; $('#v_bleed').textContent = s.bleedMm + ' mm'; } }
+  chk('#d_crop', s.cropMarks);
+  { const e = $('#d_inkSave'); if (e) { e.value = s.inkSave; $('#v_ink').textContent = s.inkSave ? s.inkSave + '%' : 'desligada'; } }
+  set('#d_pdfColor', s.pdfColor);
   set('#d_uf', s.uf);
   chk('#d_holNacional', s.holNacional);
   chk('#d_holFacultativo', s.holFacultativo);
@@ -61,7 +67,7 @@ function syncDocControls() {
       ? 'A mesa cavalete sai com o dobro da altura: face em cima, apoio embaixo, dobra no meio.'
       : eff.mode === 'fit'
         ? `Sai centralizado numa folha ${eff.sheet === 'a3' ? 'A3' : 'A4'} (${W.toFixed(0)}×${H.toFixed(0)} mm) com <b>marcas de corte</b>.`
-        : `Sai no tamanho exato: ${W.toFixed(0)}×${H.toFixed(0)} mm, sem marca de corte.`;
+        : `Sai no tamanho exato: ${W.toFixed(0)}×${H.toFixed(0)} mm${s.bleedMm > 0 ? ` + ${s.bleedMm} mm de sangria${s.cropMarks ? ' e marcas de corte fora dela' : ''}` : ''}.`;
     const auto = s.exportMode === 'auto' ? '<b>Automático</b> ajusta sozinho ao tamanho da folha. ' : '';
     hint.innerHTML = `${auto}${now} Imprima em <b>100%</b>, sem margens.`;
   }
@@ -73,6 +79,7 @@ function bindDoc() {
   Object.entries(MONTH_STYLES).forEach(([k, v]) => $('#d_style').add(new Option(v.label, k)));
   Object.entries(BINDING_TYPES).forEach(([k, v]) => $('#d_binding').add(new Option(v.label, k)));
   if (typeof EPDates !== 'undefined') EPDates.UFS.forEach(uf => $('#d_uf').add(new Option(uf, uf)));
+  EPDates.MONTHS_PT.forEach((nm, i) => $('#d_startMonth').add(new Option(i === 0 ? 'Janeiro (ano civil)' : i === 7 ? 'Agosto (ano letivo)' : nm, i + 1)));
 
   const commit = (key, val, opts = {}) => {
     pushHistory();
@@ -86,6 +93,15 @@ function bindDoc() {
   $('#d_showCover').onchange = e => commit('showCover', e.target.checked);
   $('#d_year').onchange = e => commit('year', parseInt(e.target.value, 10));
   $('#d_week').onchange = e => commit('weekStart', e.target.value);
+  $('#d_startMonth').onchange = e => commit('startMonth', parseInt(e.target.value, 10));
+  $('#d_moon').onchange = e => commit('showMoon', e.target.checked);
+  $('#d_weeknum').onchange = e => commit('showWeekNum', e.target.checked);
+  $('#d_bleed').oninput = e => { $('#v_bleed').textContent = e.target.value + ' mm'; };
+  $('#d_bleed').onchange = e => commit('bleedMm', parseFloat(e.target.value));
+  $('#d_crop').onchange = e => commit('cropMarks', e.target.checked);
+  $('#d_inkSave').oninput = e => { $('#v_ink').textContent = +e.target.value ? e.target.value + '%' : 'desligada'; };
+  $('#d_inkSave').onchange = e => commit('inkSave', parseInt(e.target.value, 10));
+  $('#d_pdfColor').onchange = e => { state.settings.pdfColor = e.target.value; state.settings = migrate(state).settings; syncDocControls(); save(); };
   $('#d_uf').onchange = e => commit('uf', e.target.value);
   ['holNacional', 'holFacultativo', 'holComemorativa'].forEach(k => {
     $('#d_' + k).onchange = e => commit(k, e.target.checked);
@@ -532,7 +548,7 @@ function applyUI() {
 }
 
 /* ================= bind da barra + menu ================= */
-// `esc` já vem de pen.js (escopo global compartilhado entre scripts clássicos).
+// `esc` já vem de vendor/core/pen.js (escopo global compartilhado entre scripts clássicos).
 function bindBar() {
   $('#b_undo').onclick = undo; $('#b_redo').onclick = redo;
   $('#b_prev').onclick = () => gotoPage(currentPage - 1);
@@ -560,6 +576,10 @@ function bindBar() {
   $('#m_history').onclick = () => { mclose(); openHistoryPop(); };
   $('#m_new').onclick = () => { mclose(); if (confirm('Começar um novo calendário? O atual será descartado.')) { newDoc(); syncDocControls(); render(); save(); fit(); enterOnboarding(); } };
   $('#m_save').onclick = () => { mclose(); exportProject(); };
+  // predefinição: só os ajustes (papel, margens, cores, saída…), sem páginas nem fotos.
+  // Abrir o arquivo em "Abrir projeto…" aplica os ajustes ao documento atual.
+  $('#m_preset').onclick = () => { mclose(); const keep = PRESET_DROP.reduce((o, k) => (delete o[k], o), JSON.parse(JSON.stringify(state.settings)));
+    downloadBlob(new Blob([JSON.stringify({ preset: true, app: 'calendarstudio', settings: keep })], { type: 'application/json' }), 'predefinicao-calendario.json'); toast('Predefinição salva.'); };
   $('#m_open').onclick = () => { mclose(); $('#file_open').click(); };
   $('#m_help').onclick = () => { mclose(); $('#help').showModal(); };
   $('#m_privacy').onclick = () => { mclose(); $('#privacy').showModal(); };
