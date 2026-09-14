@@ -1,5 +1,14 @@
 # Histórico
 
+## 0.4 — edição estilo Canva, ilustrações e capas com nome
+- **Editar direto na folha**: tocar seleciona, arrastar move, tocar de novo
+  digita; barra de ícones com fonte, tamanho e cor; foto enquadrada na página.
+- **Adicionar texto ou ilustração em uma página** (ex.: árvore em dezembro) a
+  partir do catálogo de ~400 ilustrações vetoriais.
+- **Capas com nome**: caligrafia, coroa de folhas e boho.
+- **Passo a passo** refeito: tamanho, estilo do mês, capa, cores, datas e
+  feriados do estado e encadernação, sempre com a página real.
+
 ## 0.6 — interface redesenhada e impressão com prévia
 - **Interface nova**: etapas Modelo → Fotos → Imprimir, abas (Fotos, Formato,
   Datas, Cores, Acabamento, Modelos), estilos do mês em cartões visuais,

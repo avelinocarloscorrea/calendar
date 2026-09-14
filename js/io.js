@@ -93,6 +93,7 @@ function drawSlot(pen, pages, slot, plan) {
 function docName() { return (state.settings.title || 'Calendario').replace(/[^\wÀ-ÿ .-]/g, '').trim().slice(0, 60); }
 
 async function exportPDF() {
+  if (typeof EPArt !== 'undefined') await EPArt.ensure(calUsedArt());   // ilustrações do catálogo
   const pages = expand();
   if (typeof resetPdfImages === 'function') resetPdfImages();
   const s = state.settings, [W, H] = paperWH();
@@ -116,6 +117,7 @@ async function exportPDF() {
 }
 
 async function exportPNG() {
+  if (typeof EPArt !== 'undefined') await EPArt.ensure(calUsedArt());
   const pages = expand();
   const i = clamp(currentPage, 0, pages.length - 1);
   busy('Gerando PNG da página ' + (i + 1) + '…');
@@ -165,6 +167,7 @@ function installPrintRules(ruleList) {
 function n2(v) { return Math.round(v * 100) / 100; }
 
 async function printDoc() {
+  if (typeof EPArt !== 'undefined') await EPArt.ensure(calUsedArt());
   const pages = expand();
   const s = state.settings, [W, H] = paperWH();
   const eff = effectiveExportMode();
