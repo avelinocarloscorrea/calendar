@@ -129,3 +129,10 @@ details[open] summary{border-bottom:1px solid var(--line-2)}
 .hint{color:var(--muted);font-size:11.5px;line-height:1.6;background:var(--surface-2);
   border:1px solid var(--line-2);border-radius:var(--r-sm);padding:10px 11px;margin:2px 0 10px}
 .hint b{color:var(--ink)}
+
+/* subtítulo dentro de um painel que agrupa mais de um assunto (ex.: "Documento"
+   junta Tamanho/estilo + Ano/semana) — regra transversal #5 do plano: campos
+   densos ganham subtítulo, sem precisar de mais um <details> pra separar. */
+.sub-h{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+  color:var(--muted);margin:16px 0 6px;padding-top:13px;border-top:1px solid var(--line-2)}
+.sub-h:first-child{margin-top:0;padding-top:0;border-top:0}

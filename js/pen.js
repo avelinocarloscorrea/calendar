@@ -281,16 +281,83 @@ function PdfPen(wMm, hMm, offXMm = 0, offYMm = offXMm) {
       if (s.tracking) ops.push('0 Tc');
       ops.push('ET');
     },
-    image(href, x, y, w, h) {
+    image(href, x, y, w, h, s = {}) {
       const nm = registerPdfImage(href); if (!nm) return;
-      // espaço da imagem é o quadrado unitário; cm mapeia para w×h pt na posição.
-      ops.push(`q ${n(w * PT)} 0 0 ${n(h * PT)} ${X(x)} ${Y(y + h)} cm /${nm} Do Q`);
+      // espaço da imagem é o quadrado unitário; cm mapeia para dw×dh pt.
+      // "meet" (cabe inteira) e "cover" (preenche e recorta) respeitam a
+      // proporção real da imagem — igual ao preserveAspectRatio do SVG da tela.
+      let dx = x, dy = y, dw = w, dh = h, clipBox = false;
+      const dim = (s.fit === 'meet' || s.fit === 'cover') ? imageDims(href) : null;
+      if (dim && dim.w > 0 && dim.h > 0) {
+        const k = s.fit === 'meet' ? Math.min(w / dim.w, h / dim.h) : Math.max(w / dim.w, h / dim.h);
+        dw = dim.w * k; dh = dim.h * k; dx = x + (w - dw) / 2; dy = y + (h - dh) / 2;
+        clipBox = s.fit === 'cover';
+      }
+      ops.push('q');
+      if (clipBox) ops.push(`${X(x)} ${Y(y + h)} ${n(w * PT)} ${n(h * PT)} re W n`);
+      ops.push(`${n(dw * PT)} 0 0 ${n(dh * PT)} ${X(dx)} ${Y(dy + dh)} cm /${nm} Do Q`);
       curStroke = curFill = curDash = curW = null;
     },
     textWidth: penTextWidthMm, fitText: fitTextSize, wrapText: wrapTextLines,
     stream() { return ops.join('\n'); },
   };
   return api;
+}
+
+/* dimensões (px) de um data: URI de imagem, lidas do cabeçalho — síncrono,
+   sem decodificar a imagem (PNG, JPEG, GIF, WebP). null se não reconhecer. */
+const _dimCache = new Map();
+function imageDims(href) {
+  if (_dimCache.has(href)) return _dimCache.get(href);
+  let out = null;
+  try {
+    const i = href.indexOf(','); const b64 = href.slice(i + 1, i + 1 + 64000);
+    const bin = atob(b64.slice(0, b64.length - (b64.length % 4)));
+    const u = k => bin.charCodeAt(k);
+    const be16 = k => (u(k) << 8) | u(k + 1), be32 = k => ((u(k) << 24) >>> 0) + (u(k + 1) << 16) + (u(k + 2) << 8) + u(k + 3);
+    if (bin.slice(1, 4) === 'PNG') out = { w: be32(16), h: be32(20) };
+    else if (bin.slice(0, 3) === 'GIF') out = { w: u(6) | (u(7) << 8), h: u(8) | (u(9) << 8) };
+    else if (u(0) === 0xFF && u(1) === 0xD8) {
+      let k = 2;
+      while (k < bin.length - 9) {
+        if (u(k) !== 0xFF) { k++; continue; }
+        const m = u(k + 1);
+        if (m >= 0xC0 && m <= 0xCF && m !== 0xC4 && m !== 0xC8 && m !== 0xCC) { out = { h: be16(k + 5), w: be16(k + 7) }; break; }
+        k += 2 + be16(k + 2);
+      }
+    } else if (bin.slice(0, 4) === 'RIFF' && bin.slice(8, 12) === 'WEBP') {
+      const t = bin.slice(12, 16);
+      if (t === 'VP8X') out = { w: 1 + (u(24) | (u(25) << 8) | (u(26) << 16)), h: 1 + (u(27) | (u(28) << 8) | (u(29) << 16)) };
+      else if (t === 'VP8L') { const b0 = u(21), b1 = u(22), b2 = u(23), b3 = u(24); out = { w: 1 + (((b1 & 0x3F) << 8) | b0), h: 1 + (((b3 & 0xF) << 10) | (b2 << 2) | ((b1 & 0xC0) >> 6)) }; }
+      else if (t === 'VP8 ') out = { w: (u(26) | (u(27) << 8)) & 0x3FFF, h: (u(28) | (u(29) << 8)) & 0x3FFF };
+    }
+  } catch (e) { out = null; }
+  _dimCache.set(href, out);
+  return out;
+}
+
+/* JPEG pronto para o PDF: bytes originais + largura/altura/componentes (do SOF) */
+function jpegPassthrough(href) {
+  if (!/^data:image\/jpeg;base64,/i.test(href)) return null;
+  try {
+    const bin = atob(href.slice(href.indexOf(',') + 1));
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    if (bytes[0] !== 0xFF || bytes[1] !== 0xD8) return null;
+    let k = 2;
+    while (k < bytes.length - 9) {
+      if (bytes[k] !== 0xFF) { k++; continue; }
+      const m = bytes[k + 1];
+      if (m >= 0xC0 && m <= 0xCF && m !== 0xC4 && m !== 0xC8 && m !== 0xCC) {
+        const h = (bytes[k + 5] << 8) | bytes[k + 6], w = (bytes[k + 7] << 8) | bytes[k + 8], comps = bytes[k + 9];
+        if (!w || !h || ![1, 3, 4].includes(comps)) return null;
+        return { w, h, comps, bytes };
+      }
+      if (m === 0xD8 || m === 0x01 || (m >= 0xD0 && m <= 0xD7)) { k += 2; continue; }
+      k += 2 + ((bytes[k + 2] << 8) | bytes[k + 3]);
+    }
+  } catch (e) {}
+  return null;
 }
 
 /* decodifica um data: URI de imagem para bytes RGB (+ máscara alfa) via canvas */
@@ -349,6 +416,18 @@ async function buildPDF(pages) {
   const imgObjs = [];               // {num, dict, bytes}
   let imgRes = '';
   for (const [href, nm] of PDF_IMG.entries()) {
+    // JPEG entra como está (DCTDecode): mesma qualidade e ~10× menor do que
+    // descomprimir para RGB cru + Flate — um calendário com 13 fotos caía
+    // de dezenas de MB para poucos MB. JPEG não tem transparência, então não
+    // precisa de SMask.
+    const jpg = jpegPassthrough(href);
+    if (jpg) {
+      const num = nextObj++;
+      const cs = jpg.comps === 1 ? '/DeviceGray' : jpg.comps === 4 ? '/DeviceCMYK /Decode [1 0 1 0 1 0 1 0]' : '/DeviceRGB';
+      imgObjs.push({ num, dict: `<< /Type /XObject /Subtype /Image /Width ${jpg.w} /Height ${jpg.h} /ColorSpace ${cs} /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpg.bytes.length} >>`, bytes: jpg.bytes });
+      imgRes += `/${nm} ${num} 0 R `;
+      continue;
+    }
     let dec = null;
     try { dec = await decodeImageRGBA(href); } catch (e) { continue; }
     let rgbBytes = dec.rgb, rgbFilter = '';

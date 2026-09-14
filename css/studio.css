@@ -30,6 +30,10 @@ code{font:12px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background
 #onboard .tpl-card__thumb svg{max-height:150px}
 #onboard .tpl-card__name{font-size:12.5px}
 #onboard .tpl-card__desc{font-size:10.5px}
+/* #onboard .tpl-list (seletor com ID) tem mais especificidade que .tpl-list
+   sozinho — sem isto, a regra mobile acima nunca vence dentro da tela inicial
+   e a grade de modelos vira 1 coluna larga demais no celular. */
+@media (max-width:820px){#onboard .tpl-list{grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:9px}}
 
 /* ---------- lista de páginas (capa + meses) ---------- */
 #monList{margin-bottom:4px;display:flex;flex-direction:column;gap:5px}
@@ -44,6 +48,19 @@ code{font:12px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background
   white-space:nowrap;text-overflow:ellipsis}
 .mon-dot{width:7px;height:7px;border-radius:50%;background:var(--gold);flex:none}
 
+.mon-viewsw{display:flex;gap:6px;margin-bottom:10px}
+.mon-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.mon-grid-card{display:flex;flex-direction:column;gap:5px;padding:0;border:1px solid var(--line);
+  border-radius:var(--r-sm);background:var(--surface);cursor:pointer;overflow:hidden;text-align:left}
+.mon-grid-card:hover{border-color:var(--brand-ring)}
+.mon-grid-card.on{border-color:var(--brand);box-shadow:0 0 0 2px var(--brand-ring)}
+.mon-grid-card img{display:block;width:100%;aspect-ratio:1/1;object-fit:cover}
+.mon-grid-ph{display:flex;align-items:center;justify-content:center;aspect-ratio:1/1;
+  background:var(--surface-2);color:var(--faint)}
+.mon-grid-ph svg{width:22px;height:22px}
+.mon-grid-lb{font-size:10.5px;color:var(--ink);text-align:center;padding:0 4px 6px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
 /* ---------- seletor de cor ---------- */
 input[type=color].cf-native{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
 .cf-btn{width:100%;justify-content:flex-start;gap:9px;padding:6px 9px}
@@ -51,6 +68,13 @@ input[type=color].cf-native{position:absolute;width:1px;height:1px;opacity:0;poi
 .cf-btn .hx{font:12px/1 ui-monospace,Menlo,Consolas,monospace;color:var(--muted);text-transform:uppercase}
 .cfpop{position:fixed;z-index:90;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
   box-shadow:var(--sh-pop);padding:9px}
+
+/* Exportação: sai da lista do painel esquerdo, vira popover ancorado no botão da barra
+   (ver #b_exportCfg). No celular o mesmo elemento é realocado pelo mobile.js — lá a
+   classe .pnl-pop não se aplica porque o nó já não é filho de #left. */
+.pnl-pop{display:none}
+#d_exportWrap.pop-open{display:block;position:fixed;z-index:90;width:300px;max-width:calc(100vw - 16px);
+  max-height:80vh;overflow:auto;margin:0;box-shadow:var(--sh-pop)}
 .cfpop .row1{display:grid;grid-template-columns:repeat(6,24px);gap:6px}
 .cfpop .s{width:24px;height:24px;border-radius:6px;border:1px solid rgba(0,0,0,.18);padding:0}
 .cfpop .s:hover{transform:scale(1.08)}
@@ -79,6 +103,16 @@ body.dropping::after{content:"Solte para abrir o projeto";position:fixed;inset:1
 #menu button:hover,#menu a:hover{background:var(--brand-soft)}
 #menu button svg,#menu a svg{width:15px;height:15px;color:var(--brand);flex:none}
 #menu .danger:hover{background:color-mix(in srgb,var(--danger) 12%,var(--surface))}
+
+/* popover genérico (hoje só o histórico de alterações usa) — mesmo visual
+   do #menu, mas como elemento avulso, criado/removido pelo JS. */
+.popmenu{position:fixed;z-index:90;background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r);box-shadow:var(--sh-pop);padding:5px;min-width:190px;display:flex;flex-direction:column;gap:2px}
+.popmenu button{justify-content:flex-start;border-color:transparent;background:transparent;padding:8px 10px;font-size:12.5px;gap:9px}
+.popmenu button:hover{background:var(--brand-soft)}
+.popmenu button svg{width:15px;height:15px;color:var(--brand);flex:none}
+.tm-h{font:700 10px/1 var(--ui);letter-spacing:.12em;text-transform:uppercase;color:var(--faint);padding:10px 6px 4px}
+.histpop{max-height:min(60vh,420px);overflow:auto;width:190px}
 .msep{height:1px;background:var(--line);margin:4px 2px}
 
 /* ---------- diálogos ---------- */
@@ -132,3 +166,32 @@ dialog::backdrop{background:rgba(20,22,26,.4)}
 .imgedit-inline .imgedit-tools{padding:10px 0 0;overflow:visible;flex:none}
 .imgedit-inline .imgedit-tools label{margin-bottom:10px}
 .imgedit-inline .imgedit-tools label:last-child{margin-bottom:0}
+
+/* aviso de resolução/DPI por foto — mesmo padrão visual do Polaroide Studio */
+.dpibar{display:flex;align-items:center;gap:8px;font-size:11.5px;margin:2px 0 12px;color:var(--muted)}
+.dot{width:9px;height:9px;border-radius:50%;flex:none}
+.dot.ok{background:var(--ok)} .dot.warn{background:var(--warn)} .dot.bad{background:var(--danger)}
+
+/* ---------- casca nova (vendor/core/shell.css) — ajustes do Calendar ---------- */
+.mon-viewsw{margin:4px 0 12px}
+.mon-viewsw button{gap:6px}
+.mon-viewsw button svg{width:14px;height:14px}
+.mon-grid{grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.mon-grid-card{border-radius:10px;overflow:hidden;background:var(--surface);min-height:0;padding:0;gap:0;justify-content:flex-start;align-items:stretch}
+.mon-grid-card img,.mon-grid-ph{aspect-ratio:4/3}
+.mon-grid-ph{background:var(--surface-2);color:var(--faint)}
+.mon-grid-card.on{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
+.mon-grid-lb{padding:6px 4px 7px;font-size:11px;font-weight:600}
+.mon-row{min-height:40px;border-radius:9px}
+.style-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 10px}
+.style-card{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:6px;padding:6px;min-height:0;border-radius:10px;border:1.5px solid var(--line);background:var(--surface)}
+.style-card:hover{background:var(--surface);border-color:color-mix(in srgb,var(--brand) 45%,var(--line))}
+.style-card.on{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
+.style-card__pv{display:grid;place-items:center;background:var(--stage);border-radius:6px;padding:6px;aspect-ratio:1/1}
+.style-card__pv svg{display:block;max-width:100%;max-height:100%;width:auto;height:auto;box-shadow:0 1px 3px rgba(0,0,0,.15);background:#fff}
+.style-card__lb{font-size:11px;font-weight:600;text-align:center;line-height:1.2;color:var(--ink)}
+.zval-lbl{min-width:44px;text-align:center;font-size:12px;color:var(--ink);font-variant-numeric:tabular-nums}
+#rightCover label,#rightMonth label{margin-bottom:14px}
+.img-empty-pick{min-height:92px!important;border-style:dashed!important;flex-direction:column;background:var(--surface-2)!important}
+.img-empty-pick svg{width:22px!important;height:22px!important;color:var(--brand)}
+.dpibar{padding:8px 10px;border-radius:8px;background:var(--surface-2)}

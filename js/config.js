@@ -43,6 +43,8 @@ const hexOr = (v, d) => (HEX.test(v) ? v : d);
 
 /* ---------- ícones (SVG autorais) ---------- */
 const ICONS = {
+  grid:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/>',
+  check:'<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 12l3 3 5-6"/>',
   calendar:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/>',
   plus:'<path d="M12 5v14M5 12h14"/>',
   page:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/>',
@@ -66,6 +68,7 @@ const ICONS = {
   eyeoff:'<path d="M3 3l18 18M10.6 10.6a3 3 0 0 0 4.2 4.2M9.9 4.2A11 11 0 0 1 12 4c6.5 0 10 7 10 7a17.7 17.7 0 0 1-3 4M6.6 6.6C3.9 8.2 2 12 2 12s3.6 7 10 7a11 11 0 0 0 4.3-.9"/>',
   more:'<circle cx="5.5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="18.5" cy="12" r="1.4"/>',
   trash:'<path d="M4 7h16M10 11v6M14 11v6"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13M9 7V4h6v3"/>',
+  copy:'<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
   filepdf:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>',
   filenew:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 12v6M9 15h6"/>',
   imagedown:'<rect x="3" y="3" width="18" height="13" rx="2.5"/><circle cx="8.5" cy="8" r="1.5"/><path d="M4 13l4-3.2a2 2 0 0 1 2.6 0L15 13M12 17v5m0 0l2.5-2.5M12 22l-2.5-2.5"/>',
@@ -74,6 +77,7 @@ const ICONS = {
   folder:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v1"/><path d="M3.2 9h17.6l-1.8 9.2A2 2 0 0 1 17 20H7a2 2 0 0 1-2-1.8z"/>',
   download:'<path d="M12 3v13M7 12l5 5 5-5M5 21h14"/>',
   help:'<circle cx="12" cy="12" r="9"/><path d="M9.3 9.2a2.8 2.8 0 0 1 5.4 1c0 1.9-2.7 2.3-2.7 4M12 17h.01"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   shield:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
   info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/>',
   cursor:'<path d="M5 3l6 16 2.2-6.8L20 10z"/>',
@@ -97,6 +101,9 @@ function iconSVG(name) {
 
 const ACERVO_URL = 'https://www.esmeraldapaper.com.br/ferramentas/';
 const FEEDBACK_URL = 'https://www.esmeraldapaper.com.br/avaliar-ferramentas/?tool=calendar';
+// Calendário Personalizado de Mesa e Parede (Wire-o) — produto já publicado
+// que corresponde exatamente ao que esta ferramenta gera.
+const PRINT_CTA_URL = 'https://www.esmeraldapaper.com.br/produto/calendario-personalizado-mesa-ou-parede/?utm_source=calendarstudio&utm_medium=tool_cta&utm_campaign=imprimir_profissionalmente';
 
 /* ---------- tamanhos (mm) ---------- */
 const SIZES = {
@@ -168,6 +175,7 @@ const DEFAULTS = {
   exportMode: 'auto',         // auto (decide sozinho) | real | fit
   sheet: 'a4',                // a4 | a3 (folha de saída p/ o modo "fit")
   exportDPI: 300,
+  acrylic: false,             // painéis de vidro translúcido (mesmo efeito do Polaroide Studio)
 };
 
 function emptyMonth() { return { photo: '', photoSrc: '', photoEdit: null, caption: '' }; }

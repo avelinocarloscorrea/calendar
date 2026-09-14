@@ -17,8 +17,8 @@
 <link rel="icon" href="assets/favicon.svg">
 <link rel="apple-touch-icon" href="assets/icon.svg">
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#f2eee6" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#14161a" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#fbfaf7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1d2023" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Calendar">
@@ -31,158 +31,194 @@
 <meta property="og:url" content="https://www.esmeraldapaper.com.br/calendarstudio/">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Calendar Studio — calendário personalizado com suas fotos">
-<meta name="twitter:description" content="Gere um calendário personalizado com suas fotos e os feriados do Brasil, pronto para impressão — sem cadastro, sem enviar nada a servidor nenhum."><link rel="preload" as="font" type="font/woff2" crossorigin href="assets/arimo-latin-400-normal.woff2">
+<meta name="twitter:description" content="Gere um calendário personalizado com suas fotos e os feriados do Brasil, pronto para impressão — sem cadastro, sem enviar nada a servidor nenhum.">
+<link rel="preload" as="font" type="font/woff2" crossorigin href="assets/arimo-latin-400-normal.woff2">
 <link rel="preload" as="font" type="font/woff2" crossorigin href="assets/arimo-latin-700-normal.woff2">
-<link rel="stylesheet" href="css/base.css?v=2609121621">
-<link rel="stylesheet" href="css/layout.css?v=2609121621">
-<link rel="stylesheet" href="css/studio.css?v=2609121621">
-<link rel="stylesheet" href="css/util.css?v=2609121621">
-<link rel="stylesheet" href="css/print.css?v=2609121621">
-<link rel="stylesheet" href="css/mobile.css?v=2609121621">
+<link rel="stylesheet" href="css/base.css?v=260914001751">
+<link rel="stylesheet" href="css/layout.css?v=260914001751">
+<link rel="stylesheet" href="css/studio.css?v=260914001751">
+<link rel="stylesheet" href="css/util.css?v=260914001751">
+<link rel="stylesheet" href="css/print.css?v=260914001751">
+<link rel="stylesheet" href="css/mobile.css?v=260914001751">
+<link rel="stylesheet" href="vendor/core/shell.css?v=260914001751">
 </head>
 <body>
 <div id="app">
-  <div id="bar">
-    <a class="brand" id="brandLink" rel="noopener noreferrer">
+  <header id="bar">
+    <a class="brand" id="brandLink" rel="noopener noreferrer" title="Mais ferramentas Esmeralda Paper">
       <span class="mark"><svg viewBox="0 0 64 64" aria-hidden="true"><rect x="10" y="12" width="44" height="38" rx="4" fill="var(--surface)" stroke="var(--brand)" stroke-width="3.5"/><path d="M20 7v11M44 7v11M10 26h44" stroke="var(--brand)" stroke-width="3.2" stroke-linecap="round"/><circle cx="20" cy="35" r="2.4" fill="var(--gold)"/><circle cx="32" cy="35" r="2.4" fill="var(--gold)"/><circle cx="44" cy="35" r="2.4" fill="var(--gold)"/><circle cx="20" cy="44" r="2.4" fill="var(--gold)"/></svg></span>
       <span class="txt"><span class="t1">Calendar Studio</span><span class="t2">Esmeralda&nbsp;Paper</span></span>
     </a>
-    <span class="bar-sep"></span>
-    <button id="b_undo" class="iconbtn" data-i="undo" title="Desfazer (Ctrl+Z)"></button>
-    <button id="b_redo" class="iconbtn" data-i="redo" title="Refazer (Ctrl+Y)"></button>
-    <span class="bar-sep"></span>
-    <span class="pagenav">
-      <button id="b_prev" class="iconbtn ghost" data-i="chevleft" title="Página anterior"></button>
-      <span id="pageLbl">1 / 1</span>
-      <button id="b_next" class="iconbtn ghost" data-i="chevright" title="Próxima página"></button>
-    </span>
-    <span class="bar-sep"></span>
-    <button id="b_zout" class="iconbtn ghost" data-i="zoomout" title="Reduzir"></button>
-    <span id="zval">50%</span>
-    <button id="b_zin" class="iconbtn ghost" data-i="zoomin" title="Ampliar"></button>
-    <button id="b_fit" class="iconbtn ghost" data-i="fit" title="Ajustar à tela"></button>
+    <nav class="steps" aria-label="Etapas">
+      <button type="button" class="step done" id="st_model" title="Trocar de modelo"><b>1</b><span class="lbl">Modelo</span></button>
+      <i class="step-sep"></i>
+      <button type="button" class="step on" id="st_edit"><b>2</b><span class="lbl">Fotos e ajustes</span></button>
+      <i class="step-sep"></i>
+      <button type="button" class="step" id="st_print"><b>3</b><span class="lbl">Imprimir</span></button>
+    </nav>
     <span class="bar-grow"></span>
     <span class="stat" id="stat"></span>
     <span class="bar-sep"></span>
-    <span class="bar-cluster">
-      <button id="b_pdf" class="accent" data-i="filepdf">PDF</button>
-      <button id="b_png" class="iconbtn" data-i="imagedown" title="PNG da página atual"></button>
-      <button id="b_print" class="iconbtn" data-i="printer" title="Imprimir"></button>
-    </span>
-    <span class="bar-sep"></span>
-    <span class="bar-cluster">
-      <button id="b_pl" class="iconbtn" data-i="panelleft" title="Painel esquerdo ( [ )"></button>
-      <button id="b_pr" class="iconbtn" data-i="panelright" title="Painel direito ( ] )"></button>
-      <button id="b_zen" class="iconbtn" data-i="eye" title="Tela cheia ( . )"></button>
-      <button id="b_more" class="iconbtn" data-i="more" title="Mais opções"></button>
-    </span>
-  </div>
+    <button id="b_undo" class="iconbtn ghost" data-i="undo" title="Desfazer (Ctrl+Z)"></button>
+    <button id="b_redo" class="iconbtn ghost" data-i="redo" title="Refazer (Ctrl+Y)"></button>
+    <button id="b_more" class="iconbtn ghost" data-i="more" title="Mais opções"></button>
+    <button id="b_exportCfg" class="primary cta" data-i="printer" title="Ver como vai sair na folha, baixar o PDF ou imprimir (Ctrl+P)">Imprimir e baixar</button>
+  </header>
 
-  <aside id="left" class="scrl">
-    <div class="aside-title"><span data-i="calendar"></span> Calendário</div>
-    <details><summary><span data-i="star"></span> Modelos <span class="caret" data-i="caret"></span></summary><div class="sect">
-      <div id="tplList" class="tpl-list"></div>
-      <p class="hint">Aplica tamanho, estilo, paleta e encadernação de um só golpe. Fotos e legendas que você já colocou não são apagadas.</p>
-    </div></details>
+  <aside id="left">
+    <nav class="rail" id="rail" role="tablist" aria-label="Ajustes">
+      <button type="button" data-pane="paginas"><span data-i="photo"></span><i>Fotos</i></button>
+      <button type="button" data-pane="formato"><span data-i="layout"></span><i>Formato</i></button>
+      <button type="button" data-pane="datas"><span data-i="calendar"></span><i>Datas</i></button>
+      <button type="button" data-pane="estilo"><span data-i="palette"></span><i>Cores</i></button>
+      <button type="button" data-pane="acabamento"><span data-i="binding"></span><i>Acabamento</i></button>
+      <button type="button" data-pane="modelos"><span data-i="grid"></span><i>Modelos</i></button>
+      <span class="rail-grow"></span>
+      <a href="guia.html" target="_blank" rel="noopener noreferrer" title="Guia do usuário"><span data-i="help"></span><i>Ajuda</i></a>
+    </nav>
+    <div class="panes scrl" id="panes">
 
-    <details open><summary><span data-i="list"></span> Páginas <span class="caret" data-i="caret"></span></summary><div class="sect">
-      <div id="monList"></div>
-      <p class="hint">Toque numa página para vê-la e editar a foto/legenda dela no painel à direita.</p>
-    </div></details>
+      <section class="pane" data-pane="paginas">
+        <header class="pane-h">
+          <h2>Fotos do calendário</h2>
+          <p>Uma foto por mês. Mande várias de uma vez: elas entram em ordem nos meses que ainda estão sem foto.</p>
+          <div class="pane-act"><button id="cal_batch" class="primary wfull" data-i="photo">Adicionar fotos</button></div>
+        </header>
+        <div class="mon-viewsw ep-seg">
+          <button type="button" id="mon_viewGrid" data-i="grid">Ano inteiro</button>
+          <button type="button" id="mon_viewList" data-i="list">Lista</button>
+        </div>
+        <div id="monGrid" class="mon-grid"></div>
+        <div id="monList" hidden></div>
+        <p class="hint"><b>Clique num mês</b> para trocar a foto, enquadrar e escrever a legenda no painel da direita.</p>
+      </section>
 
-    <div class="aside-title mt16"><span data-i="ruler"></span> Documento</div>
-    <details open><summary><span data-i="layout"></span> Tamanho e estilo <span class="caret" data-i="caret"></span></summary><div class="sect">
-      <label>Tamanho <select id="d_size"></select></label>
-      <label>Estilo das páginas de mês <select id="d_style"></select></label>
-      <p class="hint" id="d_styleHint"></p>
-      <label class="row"><input type="checkbox" id="d_showCover"> Incluir capa</label>
-    </div></details>
+      <section class="pane" data-pane="formato" hidden>
+        <header class="pane-h"><h2>Formato</h2><p>Tamanho do calendário e como a foto aparece em cada mês.</p></header>
+        <div class="grp-block">
+          <div class="grp-title">Tamanho</div>
+          <label>Formato <select id="d_size"></select></label>
+          <label class="row"><input type="checkbox" id="d_showCover"> Incluir capa</label>
+        </div>
+        <div class="grp-block">
+          <div class="grp-title">Página do mês</div>
+          <div id="styleCards" class="style-cards"></div>
+          <label class="xp-src">Estilo <select id="d_style"></select></label>
+          <p class="hint" id="d_styleHint"></p>
+        </div>
+      </section>
 
-    <details open><summary><span data-i="star"></span> Ano e datas especiais <span class="caret" data-i="caret"></span></summary><div class="sect">
-      <label>Ano <input type="number" id="d_year" min="1900" max="2200" step="1"></label>
-      <label>Semana começa em
-        <select id="d_week"><option value="mon">Segunda-feira</option><option value="sun">Domingo</option></select></label>
-      <label class="row"><input type="checkbox" id="d_holNacional"> Marcar feriados nacionais</label>
-      <label class="row"><input type="checkbox" id="d_holFacultativo"> Marcar pontos facultativos (Carnaval, Corpus Christi…)</label>
-      <label class="row"><input type="checkbox" id="d_holComemorativa"> Marcar datas comemorativas (Dia das Mães, Black Friday…)</label>
-      <label>Feriados estaduais da UF
-        <select id="d_uf"><option value="">Nenhuma</option></select></label>
-      <label>Eventos (um por linha: <b>AAAA-MM-DD Título</b> ou <b>DD/MM Título</b>)
-        <textarea id="d_events" rows="4" maxlength="8000" placeholder="2026-03-15 Prova&#10;20/09 Aniversário da loja"></textarea></label>
-      <p class="hint">Feriados móveis (Páscoa, Carnaval, Corpus Christi) são calculados no próprio aparelho.</p>
-    </div></details>
+      <section class="pane" data-pane="datas" hidden>
+        <header class="pane-h"><h2>Datas e feriados</h2><p>Feriados são calculados no seu aparelho, inclusive os móveis (Carnaval, Páscoa…).</p></header>
+        <div class="grp-block">
+          <div class="grp-title">Ano</div>
+          <div class="two">
+            <label>Ano <input type="number" id="d_year" min="1900" max="2200" step="1"></label>
+            <label>Semana começa <select id="d_week"><option value="mon">Segunda</option><option value="sun">Domingo</option></select></label>
+          </div>
+        </div>
+        <div class="grp-block">
+          <div class="grp-title">Feriados e datas especiais</div>
+          <label class="row"><input type="checkbox" id="d_holNacional"> Feriados nacionais</label>
+          <label class="row"><input type="checkbox" id="d_holFacultativo"> Pontos facultativos (Carnaval, Corpus Christi…)</label>
+          <label class="row"><input type="checkbox" id="d_holComemorativa"> Datas comemorativas (Dia das Mães…)</label>
+          <label>Feriados estaduais <select id="d_uf"><option value="">Nenhum estado</option></select></label>
+        </div>
+        <div class="grp-block">
+          <div class="grp-title">Aniversários e eventos</div>
+          <label>Um por linha — <b>DD/MM Título</b> ou <b>AAAA-MM-DD Título</b>
+            <textarea id="d_events" rows="6" maxlength="8000" placeholder="12/03 Aniversário da Ana&#10;25/12 Natal em família"></textarea></label>
+          <p class="hint">Datas no formato DD/MM se repetem todo ano. Aparecem em destaque no dia.</p>
+        </div>
+      </section>
 
-    <details><summary><span data-i="palette"></span> Cores <span class="caret" data-i="caret"></span></summary><div class="sect">
-      <div class="grp" id="d_palette"></div>
-      <label>Tinta (linhas e textos) <input type="color" id="d_ink"></label>
-      <label>Destaque (feriados, títulos) <input type="color" id="d_accent"></label>
-      <label>Fundo do papel <input type="color" id="d_paperbg"></label>
-    </div></details>
+      <section class="pane" data-pane="estilo" hidden>
+        <header class="pane-h"><h2>Cores</h2><p>Escolha uma paleta pronta ou ajuste cada cor.</p></header>
+        <div class="grp-block">
+          <div class="grp-title">Paleta</div>
+          <div class="grp" id="d_palette"></div>
+          <label>Tinta — textos e grade <input type="color" id="d_ink"></label>
+          <label>Destaque — feriados e títulos <input type="color" id="d_accent"></label>
+          <label>Cor do papel <input type="color" id="d_paperbg"></label>
+        </div>
+      </section>
 
-    <details><summary><span data-i="binding"></span> Acabamento e encadernação <span class="caret" data-i="caret"></span></summary><div class="sect">
-      <label>Encadernação <select id="d_binding"></select></label>
-      <label class="row"><input type="checkbox" id="d_showPunch"> Mostrar guia de furo (só na tela)</label>
-      <label class="row" id="d_printPunchRow"><input type="checkbox" id="d_printPunch"> Imprimir a guia de furo no PDF</label>
-      <div class="field-inline">
-        <label>Gramatura <select id="d_bindGsm">
-          <option value="150">150 g</option><option value="180">180 g</option><option value="220">220 g</option>
-          <option value="250">250 g</option><option value="300">300 g</option>
-        </select></label>
-        <label>Tipo de papel <select id="d_bindKind">
-          <option value="couche">Couché</option><option value="offset">Offset</option>
-          <option value="polen">Pólen / avena</option><option value="reciclado">Reciclado</option>
-        </select></label>
-      </div>
-      <p class="hint" id="d_bindHint"></p>
-    </div></details>
+      <section class="pane" data-pane="acabamento" hidden>
+        <header class="pane-h"><h2>Acabamento</h2><p>Reserva a margem certa para o furo do wire-o ou da espiral — nada importante fica no caminho.</p></header>
+        <div class="grp-block">
+          <div class="grp-title">Encadernação</div>
+          <label>Como vai prender <select id="d_binding"></select></label>
+          <label class="row"><input type="checkbox" id="d_showPunch"> Mostrar a guia de furo na tela</label>
+          <label class="row" id="d_printPunchRow"><input type="checkbox" id="d_printPunch"> Imprimir a guia de furo</label>
+        </div>
+        <div class="grp-block">
+          <div class="grp-title">Papel</div>
+          <div class="two">
+            <label>Gramatura <select id="d_bindGsm">
+              <option value="150">150 g</option><option value="180">180 g</option><option value="220">220 g</option>
+              <option value="250">250 g</option><option value="300">300 g</option>
+            </select></label>
+            <label>Tipo <select id="d_bindKind">
+              <option value="couche">Couché</option><option value="offset">Offset</option>
+              <option value="polen">Pólen / avena</option><option value="reciclado">Reciclado</option>
+            </select></label>
+          </div>
+          <p class="hint box" id="d_bindHint"></p>
+        </div>
+      </section>
 
-    <details open id="d_exportWrap"><summary><span data-i="download"></span> Exportação e impressão <span class="caret" data-i="caret"></span></summary><div class="sect">
-      <label>Montagem do PDF / impressão
-        <select id="d_exportMode">
-          <option value="auto">Automático (recomendado) — pronto pra cortar</option>
-          <option value="real">Tamanho real — 1 página por folha (gráfica)</option>
-          <option value="fit">1 por folha + marcas de corte</option>
-        </select></label>
-      <label id="d_sheetRow">Folha
-        <select id="d_sheet"><option value="a4">A4 — 210 × 297 mm</option><option value="a3">A3 — 297 × 420 mm</option></select></label>
-      <label>Resolução do PNG
-        <select id="d_dpi"><option value="200">200 dpi</option><option value="300">300 dpi</option><option value="450">450 dpi</option><option value="600">600 dpi</option></select></label>
-      <p class="hint" id="d_exportHint"></p>
-    </div></details>
-
-    <p class="hint" id="d_privadoNote"><span class="pill">Privado</span> &nbsp;O calendário fica só neste navegador. Para backup use <b>Salvar projeto</b> no menu.
-      <a id="m_acervo" rel="noopener noreferrer" hidden>↗ Ferramentas — mais utilitários</a><br>
-      <a id="m_feedback" rel="noopener noreferrer" hidden>★ Avaliar esta ferramenta</a></p>
+      <section class="pane" data-pane="modelos" hidden>
+        <header class="pane-h"><h2>Modelos</h2><p>Aplica tamanho, estilo, cores e acabamento. Suas fotos e legendas continuam onde estão.</p></header>
+        <div id="tplList" class="tpl-list"></div>
+      </section>
+    </div>
   </aside>
 
   <div id="stage">
     <div id="sheets"></div>
-    <div id="resumeAsk" hidden>
-      <div class="box">
-        <span class="kicker">Esmeralda Paper</span>
-        <span class="mark"><svg viewBox="0 0 64 64" aria-hidden="true"><rect x="10" y="12" width="44" height="38" rx="4" fill="var(--surface)" stroke="var(--brand)" stroke-width="3.5"/><path d="M20 7v11M44 7v11M10 26h44" stroke="var(--brand)" stroke-width="3.2" stroke-linecap="round"/><circle cx="20" cy="35" r="2.4" fill="var(--gold)"/><circle cx="32" cy="35" r="2.4" fill="var(--gold)"/><circle cx="44" cy="35" r="2.4" fill="var(--gold)"/><circle cx="20" cy="44" r="2.4" fill="var(--gold)"/></svg></span>
-        <h3>Bem-vindo de volta</h3>
-        <div class="rule"></div>
-        <p id="ra_desc">Encontramos um calendário salvo neste navegador.</p>
-        <div class="ra-actions">
-          <button id="ra_continue" class="primary jcc">Continuar de onde parei</button>
-          <button id="ra_new" class="jcc">Começar um novo calendário</button>
+    <div id="resumeAsk" class="ep-start" hidden>
+      <div class="ep-start__in">
+        <div class="ep-start__top">
+          <span class="brand"><span class="mark"><svg viewBox="0 0 64 64" aria-hidden="true"><rect x="10" y="12" width="44" height="38" rx="4" fill="var(--surface)" stroke="var(--brand)" stroke-width="3.5"/><path d="M20 7v11M44 7v11M10 26h44" stroke="var(--brand)" stroke-width="3.2" stroke-linecap="round"/></svg></span>
+          <span class="txt"><span class="t1">Calendar Studio</span><span class="t2">Esmeralda&nbsp;Paper</span></span></span>
         </div>
-        <p class="faint">Nada é enviado a nenhum servidor. O calendário fica só neste navegador.</p>
+        <div class="ep-hero"><div>
+          <span class="kicker">Bem-vindo de volta</span>
+          <h1>Continuar de onde parou?</h1>
+          <p id="ra_desc">Encontramos um calendário salvo neste navegador.</p>
+        </div></div>
+        <div class="ep-back">
+          <div class="ep-back__thumb" id="ra_thumb"></div>
+          <div class="ep-back__actions">
+            <button id="ra_continue" class="primary" data-i="check">Continuar este calendário</button>
+            <button id="ra_new" data-i="filenew">Começar um novo</button>
+          </div>
+        </div>
       </div>
     </div>
-    <div id="onboard" hidden>
-      <div class="box scrl">
-        <span class="kicker">Esmeralda Paper</span>
-        <span class="mark"><svg viewBox="0 0 64 64" aria-hidden="true"><rect x="10" y="12" width="44" height="38" rx="4" fill="var(--surface)" stroke="var(--brand)" stroke-width="3.5"/><path d="M20 7v11M44 7v11M10 26h44" stroke="var(--brand)" stroke-width="3.2" stroke-linecap="round"/><circle cx="20" cy="35" r="2.4" fill="var(--gold)"/><circle cx="32" cy="35" r="2.4" fill="var(--gold)"/><circle cx="44" cy="35" r="2.4" fill="var(--gold)"/><circle cx="20" cy="44" r="2.4" fill="var(--gold)"/></svg></span>
-        <h3>Calendar Studio</h3>
-        <div class="rule"></div>
-        <p>Monte um calendário com suas fotos e os feriados já marcados. Comece por um modelo pronto ou passo a passo, do seu jeito.</p>
-        <div id="ob_templates">
-          <div id="tplListOb" class="tpl-list"></div>
-          <button id="ob_wizStart" class="wiz-start">Ou montar do seu jeito, passo a passo →</button>
+    <div id="onboard" class="ep-start" hidden>
+      <div class="ep-start__in">
+        <div class="ep-start__top">
+          <span class="brand"><span class="mark"><svg viewBox="0 0 64 64" aria-hidden="true"><rect x="10" y="12" width="44" height="38" rx="4" fill="var(--surface)" stroke="var(--brand)" stroke-width="3.5"/><path d="M20 7v11M44 7v11M10 26h44" stroke="var(--brand)" stroke-width="3.2" stroke-linecap="round"/><circle cx="20" cy="35" r="2.4" fill="var(--gold)"/><circle cx="32" cy="35" r="2.4" fill="var(--gold)"/><circle cx="44" cy="35" r="2.4" fill="var(--gold)"/><circle cx="20" cy="44" r="2.4" fill="var(--gold)"/></svg></span>
+          <span class="txt"><span class="t1">Calendar Studio</span><span class="t2">Esmeralda&nbsp;Paper</span></span></span>
+          <span class="grow"></span>
+          <button type="button" id="ob_close" class="ghost" data-i="x" hidden>Voltar ao calendário</button>
+          <a class="lnk" id="ob_open" href="#" role="button"><span data-i="folder"></span> Abrir projeto salvo</a>
         </div>
-        <div id="ob_wizard" hidden>
+        <div id="ob_templates">
+          <div class="ep-hero">
+            <div>
+              <span class="kicker">Parede · mesa · ímã</span>
+              <h1>Qual calendário vamos fazer?</h1>
+              <p>Escolha um formato pronto, coloque suas fotos e baixe o PDF — feriados do Brasil já marcados e margem certa para o wire-o.</p>
+            </div>
+            <div class="ep-flow" aria-hidden="true"><span class="on"><b>1</b>Modelo</span><i></i><span><b>2</b>Fotos</span><i></i><span><b>3</b>Imprimir</span></div>
+          </div>
+          <div class="ep-filters" id="tplFilters"></div>
+          <div id="tplListOb" class="ep-tpls"></div>
+          <div class="ep-start__foot"><span><b>Privado:</b> suas fotos não saem do aparelho.</span><span><b>Feriados:</b> nacionais e estaduais, calculados localmente.</span><span><b>Pronto para imprimir:</b> PDF em A4 ou tamanho exato.</span></div>
+        </div>
+        <div id="ob_wizard" class="ep-wiz" hidden>
           <div class="wiz-head">
             <button id="ob_wizBack" class="wiz-back" data-i="chevleft" title="Voltar" aria-label="Voltar"></button>
             <div class="wiz-headtxt">
@@ -193,32 +229,50 @@
           </div>
           <div id="ob_wizGrid" class="tpl-list"></div>
         </div>
-        <p class="faint">Nada é enviado a nenhum servidor. Funciona offline.</p>
+        <button id="ob_wizStart" hidden></button>
       </div>
     </div>
+  </div>
+
+  <div class="canvasbar" id="canvasbar">
+    <button id="b_prev" class="iconbtn ghost" data-i="chevleft" title="Página anterior (↑)"></button>
+    <span id="pageLbl" class="pagelbl-btn">1 / 1</span>
+    <button id="b_next" class="iconbtn ghost" data-i="chevright" title="Próxima página (↓)"></button>
+    <span class="cb-sep"></span>
+    <button id="b_zout" class="iconbtn ghost" data-i="zoomout" title="Reduzir"></button>
+    <span id="zval" class="zval-lbl">50%</span>
+    <button id="b_zin" class="iconbtn ghost" data-i="zoomin" title="Ampliar"></button>
+    <button id="b_fit" class="iconbtn ghost" data-i="fit" title="Caber na tela"></button>
+    <span class="cb-sep"></span>
+    <button id="b_pr" class="iconbtn ghost" data-i="panelright" title="Painel de ajustes ( ] )"></button>
+    <button id="b_zen" class="iconbtn ghost" data-i="eye" title="Só as páginas ( . )"></button>
+    <button id="b_pl" hidden></button>
   </div>
 
   <aside id="right" class="scrl">
     <div id="rightCover" hidden>
       <div class="aside-title"><span data-i="bookmark"></span> Capa</div>
       <label>Título <input type="text" id="rc_title" maxlength="60"></label>
-      <label>Nome (pertence a…) <input type="text" id="rc_owner" maxlength="60"></label>
-      <label>Foto da capa</label>
+      <label>Nome ou dedicatória <input type="text" id="rc_owner" maxlength="60" placeholder="ex.: Família Souza"></label>
+      <span class="fld-lbl">Foto da capa</span>
       <div id="rc_photoFld"></div>
-      <p class="hint">Depois de escolher, arraste a foto pra posicionar e ajuste zoom/rotação/cor aqui mesmo — igual ao Polaroide Studio.</p>
+      <div class="dpibar" id="rc_dpibar" hidden><span class="dot" id="rc_dot"></span><span id="rc_dpi"></span></div>
+      <p class="hint">Sem foto, a capa sai com o ano em destaque e os 12 meses em miniatura.</p>
     </div>
     <div id="rightMonth" hidden>
       <div class="aside-title"><span data-i="photo"></span> <span id="rm_title">Mês</span></div>
-      <label>Foto do mês</label>
+      <span class="fld-lbl">Foto do mês</span>
       <div id="rm_photoFld"></div>
-      <label>Legenda (opcional, aceita {mes}, {ano}) <input type="text" id="rm_caption" maxlength="120" placeholder="ex.: Praia em {mes}"></label>
-      <p class="hint">A legenda aparece no rodapé da página, embaixo do nome do mês.</p>
+      <div class="dpibar" id="rm_dpibar" hidden><span class="dot" id="rm_dot"></span><span id="rm_dpi"></span></div>
+      <button type="button" id="rm_applyAll" class="wfull ghost" hidden data-i="copy">Usar este ajuste de cor em todos os meses</button>
+      <label>Legenda (opcional) <input type="text" id="rm_caption" maxlength="120" placeholder="ex.: Praia em {mes}"></label>
+      <p class="hint">A legenda aparece ao lado do nome do mês. <b>{mes}</b> e <b>{ano}</b> viram o mês e o ano.</p>
     </div>
   </aside>
 </div>
 
 <!-- ===== casca de celular (≤ 820 px) ===== -->
-<div id="mroot" aria-hidden="true">
+<div id="mroot">
   <header id="mtop">
     <span class="mbrand">Calendar Studio</span>
     <span class="mpg" id="mpg"></span>
@@ -229,55 +283,107 @@
   <div id="mbody">
     <div id="mstageWrap"><!-- #stage entra aqui --></div>
     <section class="msheet scrl" id="msheet_doc" data-tab="documento" hidden><!-- #left entra aqui --></section>
-    <section class="msheet scrl" id="msheet_pag" data-tab="pagina" hidden><!-- #right entra aqui --></section>
+    <section class="msheet scrl" id="msheet_pag" data-tab="pagina" hidden>
+      <div id="msel_bar" class="msel-bar" hidden><span id="msel_name" class="msel-name"></span><button type="button" id="msel_adjust" class="primary">Ajustar</button></div>
+      <!-- #right entra aqui --></section>
     <section class="msheet scrl" id="msheet_export" data-tab="exportar" hidden>
+      <div class="pane-h"><h2>Imprimir e baixar</h2><p>Veja como vai sair na folha e baixe o PDF pronto.</p></div>
+      <div id="mx_settings"><!-- prévia + #xp_body entram aqui no celular --></div>
       <div class="mx-card">
-        <h3>Formato</h3>
-        <div id="mx_settings"><!-- #d_exportWrap entra aqui no celular --></div>
-      </div>
-      <div class="mx-card">
-        <h3>Baixar</h3>
-        <button class="mbig primary" id="mx_pdf" data-i="filepdf">Baixar PDF</button>
-        <div class="m2"><button class="mbig" id="mx_png" data-i="imagedown">PNG da página</button><button class="mbig" id="mx_print" data-i="printer">Imprimir</button></div>
+        <button class="mbig primary" id="mx_pdf" data-i="filepdf">Baixar PDF pronto para imprimir</button>
+        <div class="m2"><button class="mbig" id="mx_print" data-i="printer">Imprimir</button><button class="mbig" id="mx_png" data-i="imagedown">PNG da página</button></div>
       </div>
       <div class="mx-card">
         <h3>Projeto</h3>
         <div class="m2"><button class="mbig" id="mx_save" data-i="save">Salvar .json</button><button class="mbig" id="mx_open" data-i="folder">Abrir .json</button></div>
         <p class="hint">Tudo fica só neste aparelho. <b>Salvar</b> baixa um arquivo para backup ou para abrir noutro lugar.</p>
       </div>
-      <div class="mx-card">
-        <h3>Ajuda</h3>
-        <a class="mbig" href="guia.html" target="_blank" rel="noopener noreferrer" data-i="page">Guia do usuário</a>
-      </div>
     </section>
   </div>
   <nav id="mtabs">
     <button data-tab="paginas" class="on"><span data-i="page"></span><i>Páginas</i></button>
-    <button data-tab="documento"><span data-i="ruler"></span><i>Documento</i></button>
-    <button data-tab="pagina"><span data-i="sliders"></span><i>Página</i></button>
-    <button data-tab="exportar"><span data-i="download"></span><i>Exportar</i></button>
+    <button data-tab="documento"><span data-i="sliders"></span><i>Ajustes</i></button>
+    <button data-tab="pagina"><span data-i="photo"></span><i>Foto</i></button>
+    <button data-tab="exportar"><span data-i="printer"></span><i>Imprimir</i></button>
   </nav>
 </div>
 
 <button id="zenExit" class="iconbtn" data-i="eyeoff" title="Sair da tela cheia (Esc)" hidden></button>
 
 <div id="menu" class="scrl" hidden>
-  <button id="m_pdf" data-i="filepdf">Exportar PDF</button>
-  <button id="m_png" data-i="imagedown">Exportar PNG (página atual)</button>
-  <button id="m_print" data-i="printer">Imprimir</button>
-  <div class="msep"></div>
-  <button id="m_new" data-i="filenew">Novo calendário</button>
+  <div class="menu-h">Calendário</div>
+  <button id="m_new" data-i="filenew">Novo calendário…</button>
   <button id="m_save" data-i="save">Salvar projeto (.json)</button>
   <button id="m_open" data-i="folder">Abrir projeto…</button>
+  <button id="m_history" data-i="clock">Histórico de alterações</button>
   <div class="msep"></div>
+  <div class="menu-h">Exportar</div>
+  <button id="m_pdf" data-i="filepdf">Baixar PDF</button>
+  <button id="m_png" data-i="imagedown">PNG da página atual</button>
+  <button id="m_print" data-i="printer">Imprimir…</button>
+  <div class="msep"></div>
+  <label class="row"><input type="checkbox" id="d_acrylic"> Painéis translúcidos</label>
   <button id="m_install" data-i="download" hidden>Instalar na tela de início</button>
-  <a id="m_guide" href="guia.html" target="_blank" rel="noopener noreferrer"><span data-i="page"></span> Guia do usuário</a>
-  <button id="m_help" data-i="help">Atalhos de teclado</button>
-  <button id="m_privacy" data-i="shield">Privacidade e segurança</button>
-  <button id="m_about" data-i="info">Sobre</button>
+  <a id="m_guide" href="guia.html" target="_blank" rel="noopener noreferrer"><span data-i="help"></span> Guia do usuário</a>
+  <button id="m_help" data-i="info">Atalhos de teclado</button>
+  <button id="m_privacy" data-i="shield">Privacidade</button>
+  <button id="m_about" data-i="bookmark">Sobre</button>
+  <a id="m_acervo" rel="noopener noreferrer" hidden><span data-i="grid"></span> Mais ferramentas</a>
+  <a id="m_feedback" rel="noopener noreferrer" hidden><span data-i="star"></span> Avaliar esta ferramenta</a>
 </div>
 
+<!-- ===== Imprimir e baixar ===== -->
+<dialog id="exportDlg" class="xdlg" aria-labelledby="xp_title">
+  <div class="dhead"><div><span id="xp_title">Imprimir e baixar</span><span class="sub" id="xp_sub"></span></div><button class="iconbtn ghost" data-close data-i="x" title="Fechar (Esc)"></button></div>
+  <div class="xdlg-main">
+    <div class="xdlg-prev" id="xp_prevHost">
+      <div class="ep-sheet" id="xp_preview"></div>
+      <div class="xp-summary" id="xp_summary"></div>
+    </div>
+    <div class="xdlg-body" id="xp_bodyHost">
+      <div id="xp_body">
+        <div class="xp-src">
+          <select id="d_exportMode">
+            <option value="auto">Automático</option>
+            <option value="fit">Folha com marcas de corte</option>
+            <option value="real">Tamanho exato</option>
+          </select>
+          <select id="d_sheet"><option value="a4">A4</option><option value="a3">A3</option></select>
+        </div>
+        <div class="xp-sec" id="xp_modesWrap">
+          <div class="xp-h">Onde e como vai imprimir?</div>
+          <div id="xp_modes"></div>
+        </div>
+        <div class="xp-sec" id="d_sheetRow" hidden>
+          <span class="fld-lbl">Folha da impressora</span>
+          <div id="xp_sheet"></div>
+        </div>
+        <div class="xp-sec">
+          <div class="xp-h">Na hora de imprimir</div>
+          <p class="xp-how" id="d_exportHint"></p>
+        </div>
+        <div class="xp-sec">
+          <div class="xp-h">Verificação</div>
+          <ul id="xp_check"></ul>
+        </div>
+        <details class="xp-adv"><summary>Imagem (PNG)</summary><div class="sect">
+          <label>Resolução do PNG
+            <select id="d_dpi"><option value="200">200 dpi</option><option value="300">300 dpi</option><option value="450">450 dpi</option><option value="600">600 dpi</option></select></label>
+        </div></details>
+      </div>
+    </div>
+  </div>
+  <div class="xdlg-foot">
+    <a id="m_print_cta" class="cta-link" rel="noopener noreferrer" hidden><span data-i="bookmark"></span> Prefere receber impresso com wire-o?</a>
+    <span class="grow"></span>
+    <button id="b_png" data-i="imagedown">PNG da página</button>
+    <button id="b_print" data-i="printer">Imprimir</button>
+    <button id="b_pdf" class="primary" data-i="download">Baixar PDF</button>
+  </div>
+</dialog>
+
 <input type="file" id="file_open" accept="application/json,.json" hidden>
+<input type="file" id="file_batch" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden>
 <div id="toast" hidden></div>
 <div id="busy" hidden><div class="card"><span class="spin"></span><span id="busyTxt">Processando…</span></div></div>
 
@@ -288,13 +394,14 @@
     <tr><td>Roda / arraste com botão do meio</td><td>Rolar / deslocar as páginas</td></tr>
     <tr><td>PageUp / PageDown · ↑ ↓</td><td>Página anterior / seguinte</td></tr>
     <tr><td><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd></td><td>Desfazer / Refazer</td></tr>
-    <tr><td><kbd>[</kbd> / <kbd>]</kbd></td><td>Ocultar painel esquerdo / direito</td></tr>
-    <tr><td><kbd>.</kbd> / <kbd>Esc</kbd></td><td>Tela cheia / sair</td></tr>
+    <tr><td><kbd>Ctrl</kbd>+<kbd>P</kbd></td><td>Imprimir e baixar</td></tr>
+    <tr><td><kbd>[</kbd> / <kbd>]</kbd></td><td>Recolher painel esquerdo / direito</td></tr>
+    <tr><td><kbd>.</kbd> / <kbd>Esc</kbd></td><td>Só as páginas / sair</td></tr>
   </table></div>
 </dialog>
 
 <dialog id="privacy">
-  <div class="dhead">Privacidade e segurança <button class="iconbtn ghost" data-close data-i="x"></button></div>
+  <div class="dhead">Privacidade <button class="iconbtn ghost" data-close data-i="x"></button></div>
   <div class="dbody scrl">
     <p><span class="pill">100% no seu computador</span></p>
     <p>O Calendar Studio não envia nada a servidor nenhum — fotos, textos e ajustes ficam só neste navegador. Detalhes sobre segurança, tratamento de fotos e cookies estão na <a href="https://www.esmeraldapaper.com.br/politica-de-privacidade/#ferramentas-gratuitas" target="_blank" rel="noopener noreferrer">Política de privacidade</a>.</p>
@@ -312,18 +419,20 @@
   </div>
 </dialog>
 
-<script defer src="vendor/core/dates.js?v=2609121621"></script>
-<script defer src="vendor/core/binding.js?v=2609121621"></script>
-<script defer src="vendor/core/imgedit.js?v=2609121621"></script>
-<script defer src="js/config.js?v=2609121621"></script>
-<script defer src="js/pen.js?v=2609121621"></script>
-<script defer src="js/fonts.js?v=2609121621"></script>
-<script defer src="js/images.js?v=2609121621"></script>
-<script defer src="js/calendar.js?v=2609121621"></script>
-<script defer src="js/io.js?v=2609121621"></script>
-<script defer src="js/mobile.js?v=2609121621"></script>
-<script defer src="js/install.js?v=2609121621"></script>
-<script defer src="js/ui.js?v=2609121621"></script>
-<script defer src="js/wizard.js?v=2609121621"></script>
+<script defer src="vendor/core/dates.js?v=260914001751"></script>
+<script defer src="vendor/core/binding.js?v=260914001751"></script>
+<script defer src="vendor/core/imgedit.js?v=260914001751"></script>
+<script defer src="vendor/core/shell.js?v=260914001751"></script>
+<script defer src="js/config.js?v=260914001751"></script>
+<script defer src="js/pen.js?v=260914001751"></script>
+<script defer src="js/fonts.js?v=260914001751"></script>
+<script defer src="js/images.js?v=260914001751"></script>
+<script defer src="js/calendar.js?v=260914001751"></script>
+<script defer src="js/io.js?v=260914001751"></script>
+<script defer src="js/mobile.js?v=260914001751"></script>
+<script defer src="js/install.js?v=260914001751"></script>
+<script defer src="js/ui.js?v=260914001751"></script>
+<script defer src="js/wizard.js?v=260914001751"></script>
+<script defer src="js/shell-ui.js?v=260914001751"></script>
 </body>
 </html>

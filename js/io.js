@@ -247,14 +247,15 @@ function exportProject() {
   } catch (e) { toast('Erro ao salvar o projeto.'); }
 }
 async function importProject(file) {
-  if (file.size > 12 * 1024 * 1024) { alert('Arquivo grande demais para um projeto do Calendar Studio.'); return; }
+  if (file.size > 250 * 1024 * 1024) { alert('Arquivo grande demais para um projeto do Calendar Studio.'); return; }
   busy('Abrindo projeto…');
   try {
     const d = JSON.parse(await file.text());
     const st = d && d.state ? d.state : d;
     if (!st || typeof st !== 'object') throw new Error('estrutura');
     state = migrate(st);
-    past = []; future = []; currentPage = 0; _holCache = null; _evCache = null;
+    past = []; future = []; histMeta = []; currentPage = 0; _holCache = null; _evCache = null;
+    if (typeof _dpiPxCache !== 'undefined') _dpiPxCache.clear();
     syncDocControls(); render(); save(); fit();
     toast('Projeto carregado.');
   } catch (e) { console.error(e); alert('Arquivo de projeto inválido.'); }

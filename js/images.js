@@ -8,10 +8,10 @@
 
 const IMG_SRC_RE = /^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+$/;
 function validImageSrc(v) {
-  return typeof v === 'string' && v.length < 6e6 && IMG_SRC_RE.test(v);
+  return typeof v === 'string' && v.length < 16e6 && IMG_SRC_RE.test(v);
 }
 
-// lê o arquivo escolhido, redesenha (tira EXIF/GPS, reduz a ~1800px) e
+// lê o arquivo escolhido, redesenha (tira EXIF/GPS, reduz a no máx. 3600 px, o bastante para A4 a 300 dpi) e
 // devolve uma Promise<dataURL> — a fonte que o editor usa, guardada em
 // `photoSrc` pra poder reajustar depois sem perder qualidade de novo.
 function readAndSanitize(file) {
@@ -25,15 +25,15 @@ function readAndSanitize(file) {
       img.onload = () => {
         let w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
         if (!w || !h) { reject(new Error('Imagem sem dimensões.')); return; }
-        const scale = Math.min(1, 1800 / Math.max(w, h));
+        const scale = Math.min(1, 3600 / Math.max(w, h));
         w = Math.max(1, Math.round(w * scale)); h = Math.max(1, Math.round(h * scale));
         const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
         cv.getContext('2d').drawImage(img, 0, 0, w, h);
         let out;
-        try { out = cv.toDataURL('image/jpeg', 0.88); }
+        try { out = cv.toDataURL('image/jpeg', 0.9); }
         catch (e) { reject(new Error('Não consegui processar a imagem.')); return; }
-        if (out.length > 5.5e6) { try { out = cv.toDataURL('image/jpeg', 0.7); } catch (e) {} }
-        if (out.length > 6e6) { reject(new Error('Imagem grande demais mesmo otimizada — use uma menor.')); return; }
+        if (out.length > 9e6) { try { out = cv.toDataURL('image/jpeg', 0.78); } catch (e) {} }
+        if (out.length > 15e6) { reject(new Error('Imagem grande demais mesmo otimizada — use uma menor.')); return; }
         if (!validImageSrc(out)) { reject(new Error('Não consegui validar a imagem processada.')); return; }
         resolve(out);
       };

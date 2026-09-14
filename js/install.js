@@ -1,4 +1,4 @@
-/* Planner Studio — js/install.js
+/* Calendar Studio — js/install.js
    Instalar na tela de início (PWA). Sem service worker: captura o
    beforeinstallprompt e mostra o item no menu; iOS cai num aviso. */
 "use strict";

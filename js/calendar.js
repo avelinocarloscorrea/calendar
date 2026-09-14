@@ -60,6 +60,7 @@ function migrate(raw) {
     exportMode: isStand ? 'real' : (['auto', 'real', 'fit'].indexOf(ds.exportMode) >= 0 ? ds.exportMode : DEFAULTS.exportMode),
     sheet: ds.sheet === 'a3' ? 'a3' : 'a4',
     exportDPI: clamp(Math.round(num(ds.exportDPI, DEFAULTS.exportDPI)), 150, 600),
+    acrylic: ds.acrylic !== false,
   };
   const mIn = Array.isArray(src.months) ? src.months : [];
   const months = Array.from({ length: 12 }, (_, i) => {
@@ -76,20 +77,88 @@ function migrate(raw) {
   return { schema: 1, onboarded: src.onboarded !== false, settings, months };
 }
 
-/* ================= persistência ================= */
-let saveT, _saveWarned = false;
+/* ================= persistência =================
+   O documento (textos/ajustes) vai para o localStorage; as FOTOS vão para o
+   IndexedDB do navegador. O localStorage aguenta ~5 MB no total — com fotos
+   em qualidade de impressão (até ~3600 px) não cabia nem um calendário. No
+   JSON do localStorage cada foto vira só o marcador '#idb'. */
+const IDB_NAME = 'calendarstudio', IDB_STORE = 'photos', IDB_MARK = '#idb';
+let _idbP = null;
+function idbOpen() {
+  if (_idbP) return _idbP;
+  _idbP = new Promise((res, rej) => {
+    if (typeof indexedDB === 'undefined') { rej(new Error('sem IndexedDB')); return; }
+    const r = indexedDB.open(IDB_NAME, 1);
+    r.onupgradeneeded = () => { if (!r.result.objectStoreNames.contains(IDB_STORE)) r.result.createObjectStore(IDB_STORE); };
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+  return _idbP;
+}
+function idbTx(mode, fn) {
+  return idbOpen().then(db => new Promise((res, rej) => {
+    const tx = db.transaction(IDB_STORE, mode), st = tx.objectStore(IDB_STORE);
+    const out = fn(st);
+    tx.oncomplete = () => res(out); tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error);
+  }));
+}
+// campos de foto do documento: [chave no IDB, getter, setter]
+function photoSlots(st) {
+  const s = st.settings, out = [];
+  ['coverPhoto', 'coverPhotoSrc'].forEach(k => out.push([k, () => s[k], v => { s[k] = v; }]));
+  st.months.forEach((mo, i) => ['photo', 'photoSrc'].forEach(k => out.push([`m${i}.${k}`, () => mo[k], v => { mo[k] = v; }])));
+  return out;
+}
+const _idbSaved = new Map();          // chave -> valor já gravado (evita regravar foto igual)
+let saveT, _saveWarned = false, _idbOk = true;
 function save() {
   clearTimeout(saveT);
   saveT = setTimeout(() => {
-    try { localStorage.setItem(KEY, JSON.stringify(state)); _saveWarned = false; }
-    catch (e) {
-      if (!_saveWarned) { _saveWarned = true; try { toast('Não coube no armazenamento do navegador (foto grande?). Use "Salvar projeto" no menu para não perder.'); } catch (_) {} }
+    const puts = [], dels = [];
+    const light = JSON.parse(JSON.stringify(state, (k, v) => (typeof v === 'string' && v.length > 512 && v.startsWith('data:')) ? IDB_MARK : v));
+    if (_idbOk) {
+      photoSlots(state).forEach(([key, get]) => {
+        const v = get() || '';
+        if ((_idbSaved.get(key) || '') === v) return;
+        if (v) puts.push([key, v]); else dels.push(key);
+      });
+      light.photosInIdb = true;
     }
+    const writeLS = () => {
+      try { localStorage.setItem(KEY, JSON.stringify(_idbOk ? light : state)); _saveWarned = false; }
+      catch (e) {
+        if (!_saveWarned) { _saveWarned = true; try { toast('Não coube no armazenamento do navegador. Use "Salvar projeto" no menu para não perder.'); } catch (_) {} }
+      }
+    };
+    if (!_idbOk || (!puts.length && !dels.length)) { writeLS(); return; }
+    idbTx('readwrite', st => { puts.forEach(([k, v]) => st.put(v, k)); dels.forEach(k => st.delete(k)); })
+      .then(() => { puts.forEach(([k, v]) => _idbSaved.set(k, v)); dels.forEach(k => _idbSaved.set(k, '')); writeLS(); })
+      .catch(err => { console.warn('IndexedDB indisponível, usando só localStorage', err); _idbOk = false; writeLS(); });
   }, 300);
 }
 function load() {
   let d; try { d = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) {}
   state = (d && typeof d === 'object') ? migrate(d) : newState();
+  if (!(d && d.photosInIdb)) return;
+  // quais campos tinham foto guardada no IndexedDB
+  const want = [];
+  const ds = d.settings || {};
+  ['coverPhoto', 'coverPhotoSrc'].forEach(k => { if (ds[k] === IDB_MARK) want.push(k); });
+  (Array.isArray(d.months) ? d.months : []).forEach((mo, i) => ['photo', 'photoSrc'].forEach(k => { if (mo && mo[k] === IDB_MARK) want.push(`m${i}.${k}`); }));
+  if (!want.length) return;
+  const target = state;
+  const got = {};
+  idbTx('readonly', st => { want.forEach(k => { const r = st.get(k); r.onsuccess = () => { got[k] = r.result; }; }); })
+    .then(() => {
+      if (state !== target) return;   // documento já foi trocado nesse meio-tempo
+      let n = 0;
+      photoSlots(state).forEach(([key, get, set]) => {
+        const v = got[key];
+        if (typeof v === 'string' && validImageSrc(v) && !get()) { set(v); _idbSaved.set(key, v); n++; }
+      });
+      if (n) { try { render(); } catch (e) {} document.dispatchEvent(new CustomEvent('photos-restored')); }
+    })
+    .catch(err => console.warn('não consegui ler as fotos salvas', err));
 }
 
 /* ================= geometria ================= */
@@ -205,110 +274,199 @@ function hx(c) { c = HEX.test(c) ? c : '#000000'; if (c.length === 4) c = '#' + 
 function mixHex(a, b, t) { const A = hx(a), B = hx(b); return '#' + [0, 1, 2].map(i => Math.round(A[i] + (B[i] - A[i]) * t).toString(16).padStart(2, '0')).join(''); }
 
 /* ================= desenho ================= */
-function drawCover(pen, box, s) {
-  const { w, h } = box;
-  const pad = clamp(Math.min(w, h) * 0.035, 5, 10);
-  const hasPhoto = !!s.coverPhoto;
-  if (hasPhoto && pen.image) {
-    pen.image(s.coverPhoto, box.x, box.y, w, h, { fit: 'cover' });
-  } else {
-    pen.rect(box.x, box.y, w, h, { fill: s.paperBg });
-    pen.rect(box.x + pad, box.y + pad, w - 2 * pad, h - 2 * pad, { stroke: s.accent, w: 0.6 });
+// escala tipográfica: 1 = página de ~190 mm de largura útil (A4 retrato).
+// Sem isso o pôster A3 saía com letra de A4 e o ímã com letra estourando.
+const typeK = box => clamp(Math.min(box.w, box.h * 1.25) / 190, 0.5, 2.2);
+const MONTH_NUM = m => String(m).padStart(2, '0');
+
+// área de foto vazia: em vez de um buraco em branco no papel, um bloco de cor
+// suave com o número do mês — a página continua com cara de pronta. Na tela,
+// um aviso discreto de onde clicar.
+function drawPhotoPlaceholder(pen, r, s, m, opts, big) {
+  pen.rect(r.x, r.y, r.w, r.h, { fill: mixHex(s.accent, s.paperBg, 0.86) });
+  const label = m ? MONTH_NUM(m) : String(s.year);
+  const size = clamp(Math.min(r.h * 0.62, r.w * (m ? 0.42 : 0.3)) * PT, 10, big ? 260 : 150);
+  pen.text(label, r.x + r.w / 2, r.y + r.h / 2, { size, font: 'bold', family: 'serif', color: mixHex(s.accent, s.paperBg, 0.62), align: 'c', baseline: 'middle' });
+  if (opts && opts.screen && r.h > 24 && r.w > 30) {
+    pen.text('+ foto', r.x + r.w / 2, r.y + r.h - Math.min(8, r.h * 0.12), { size: clamp(r.w * 0.05 * PT, 7, 14), color: mixHex(s.ink, s.paperBg, 0.45), align: 'c', baseline: 'middle' });
   }
-  const bandH = clamp(h * 0.30, 46, 110);
-  const by = box.y + h - bandH;
-  pen.rect(box.x, by, w, bandH, { fill: s.paperBg, fillOpacity: hasPhoto ? 0.93 : 1 });
-  pen.line(box.x, by, box.x + w, by, { w: 0.5, color: s.accent });
+}
+
+function drawCover(pen, box, s, opts) {
+  const { w, h } = box, k = typeK(box);
+  const pad = clamp(Math.min(w, h) * 0.05, 5, 16);
+  const cx = box.x + w / 2;
   const title = s.title || 'Calendário';
-  const titleSize = pen.fitText ? pen.fitText(title, w - 2 * pad, 34, 14, true, 'serif') : 24;
-  pen.text(title, box.x + w / 2, by + bandH * 0.36, { size: titleSize, font: 'bold', family: 'serif', color: s.ink, align: 'c', baseline: 'middle' });
-  const sub = [String(s.year), s.owner].filter(Boolean).join('   ·   ');
-  pen.text(sub, box.x + w / 2, by + bandH * 0.70, { size: 11, family: 'sans', color: s.accent, align: 'c', baseline: 'middle', font: 'bold' });
+  if (s.coverPhoto && pen.image) {
+    pen.image(s.coverPhoto, box.x, box.y, w, h, { fit: 'cover' });
+    const bandH = clamp(h * 0.26, 34, 120);
+    const by = box.y + h - bandH;
+    pen.rect(box.x, by, w, bandH, { fill: s.paperBg, fillOpacity: 0.94 });
+    pen.rect(box.x, by, w, 0.9 * k, { fill: s.accent });
+    const tSize = pen.fitText(title, w - 2 * pad, 40 * k, 12, false, 'serif');
+    pen.text(title, cx, by + bandH * 0.4, { size: tSize, family: 'serif', color: s.ink, align: 'c', baseline: 'middle' });
+    const sub = [String(s.year), s.owner].filter(Boolean).join('  ·  ').toUpperCase();
+    pen.text(sub, cx, by + bandH * 0.74, { size: clamp(10 * k, 6.5, 18), family: 'sans', color: s.accent, align: 'c', baseline: 'middle', font: 'bold', tracking: 0.9 * k });
+    return;
+  }
+  // capa tipográfica (sem foto): ano grande + título + os 12 meses em miniatura
+  pen.rect(box.x, box.y, w, h, { fill: s.paperBg });
+  pen.rect(box.x + pad, box.y + pad, w - 2 * pad, h - 2 * pad, { stroke: mixHex(s.accent, s.paperBg, 0.35), w: 0.5 * Math.sqrt(k) });
+  const yr = String(s.year);
+  const ySize = pen.fitText(yr, w - 4 * pad, 150 * k, 24, true, 'sans');
+  const yY = box.y + h * 0.3;
+  pen.text(yr, cx, yY, { size: ySize, font: 'bold', family: 'sans', color: mixHex(s.accent, s.paperBg, 0.4), align: 'c', baseline: 'middle' });
+  const tSize = pen.fitText(title, w - 4 * pad, 34 * k, 11, false, 'serif');
+  const tY = yY + ySize * 0.42 / PT + tSize * 0.75 / PT;
+  pen.text(title, cx, tY, { size: tSize, family: 'serif', color: s.ink, align: 'c', baseline: 'middle' });
+  pen.line(cx - 9 * k, tY + tSize * 0.6 / PT + 3 * k, cx + 9 * k, tY + tSize * 0.6 / PT + 3 * k, { w: 0.5 * k, color: s.accent });
+  // miniaturas dos meses (4×3) na parte de baixo
+  const gTop = tY + tSize * 0.6 / PT + 12 * k, gBot = box.y + h - pad - (s.owner ? 16 * k : 8 * k);
+  const gw = w - 4 * pad, gh = Math.max(0, gBot - gTop);
+  const cols = w >= h * 0.95 ? 6 : 4, rows = 12 / cols;
+  const cellW = gw / cols, cellH = gh / rows;
+  if (cellH > 10 && cellW > 10) {
+    const mk = clamp(Math.min(cellW, cellH) / 45, 0.35, 1.6);
+    for (let m = 1; m <= 12; m++) {
+      const c = (m - 1) % cols, r0 = Math.floor((m - 1) / cols);
+      const gx = box.x + 2 * pad + c * cellW + cellW * 0.08, gy = gTop + r0 * cellH + cellH * 0.06;
+      const iw = cellW * 0.84, ih = cellH * 0.86;
+      pen.text(EPDates.MONTHS_PT[m - 1].toUpperCase(), gx, gy, { size: clamp(7 * mk * 1.4, 4, 11), font: 'bold', color: s.ink, baseline: 'top', tracking: 0.3 * mk });
+      miniMonth(pen, { x: gx, y: gy + 5 * mk * 1.4, w: iw, h: ih - 5 * mk * 1.4 }, s, m);
+    }
+  }
+  if (s.owner) pen.text(s.owner, cx, box.y + h - pad - 7 * k, { size: clamp(12 * k, 7, 22), font: 'it', family: 'serif', color: mixHex(s.ink, s.paperBg, 0.25), align: 'c', baseline: 'middle' });
+}
+// calendário em miniatura (só números), usado na capa sem foto
+function miniMonth(pen, r, s, m) {
+  const order = s.weekStart === 'sun' ? [0, 1, 2, 3, 4, 5, 6] : [1, 2, 3, 4, 5, 6, 0];
+  const first = new Date(s.year, m - 1, 1), startCol = order.indexOf(first.getDay());
+  const dim = EPDates.daysInMonth(s.year, m), cw = r.w / 7, rh = r.h / 6;
+  const size = clamp(Math.min(cw * 0.5, rh * 0.62) * PT, 2.5, 9);
+  for (let d = 1; d <= dim; d++) {
+    const idx = startCol + d - 1, cc = idx % 7, rr = Math.floor(idx / 7);
+    const dow = new Date(s.year, m - 1, d).getDay();
+    pen.text(String(d), r.x + cc * cw + cw * 0.9, r.y + rr * rh + rh * 0.5, { size, color: (dow === 0 || dow === 6) ? s.accent : mixHex(s.ink, s.paperBg, 0.35), align: 'r', baseline: 'middle' });
+  }
 }
 
 function monthLayout(style, box) {
-  const pad = clamp(Math.min(box.w, box.h) * 0.035, 5, 9);
+  const k = typeK(box);
+  const pad = clamp(Math.min(box.w, box.h) * 0.04, 5, 14);
   const x = box.x + pad, y = box.y + pad, w = box.w - 2 * pad, h = box.h - 2 * pad;
+  const headH = 15 * k, gap = 6 * k;
   if (style === 'sografe') {
-    const headH = Math.min(16, h * 0.12);
-    return { photo: null, head: { x, y, w, h: headH }, grid: { x, y: y + headH + 3, w, h: h - headH - 3 } };
+    const hh = Math.min(22 * k, h * 0.14);
+    return { photo: null, head: { x, y, w, h: hh }, grid: { x, y: y + hh + gap, w, h: h - hh - gap } };
   }
   if (style === 'fotolado') {
     const pw = w * 0.36;
-    return { photo: { x, y, w: pw, h }, head: { x: x + pw + 6, y, w: w - pw - 6, h: 15 }, grid: { x: x + pw + 6, y: y + 19, w: w - pw - 6, h: h - 19 } };
+    return { photo: { x, y, w: pw, h }, head: { x: x + pw + gap, y, w: w - pw - gap, h: headH }, grid: { x: x + pw + gap, y: y + headH + gap, w: w - pw - gap, h: h - headH - gap } };
   }
   if (style === 'fotofundo') {
-    const panelTop = y + h * 0.38;
+    const panelTop = y + h * 0.4;
     return {
       photoFull: box,
-      panel: { x: box.x, y: panelTop - 4, w: box.w, h: (box.y + box.h) - (panelTop - 4) },
-      head: { x, y: panelTop + 5, w, h: 15 },
-      grid: { x, y: panelTop + 23, w, h: (box.y + box.h - pad) - (panelTop + 23) },
+      panel: { x: box.x, y: panelTop - 4 * k, w: box.w, h: (box.y + box.h) - (panelTop - 4 * k) },
+      head: { x, y: panelTop + 4 * k, w, h: headH },
+      grid: { x, y: panelTop + 4 * k + headH + gap, w, h: (box.y + box.h - pad) - (panelTop + 4 * k + headH + gap) },
     };
   }
   if (style === 'moldura') {
     const cardW = w * 0.86, cardH = h * 0.52;
-    const cx = x + (w - cardW) / 2, cy = box.y + box.h - pad - cardH;
+    const cx = x + (w - cardW) / 2, cy = box.y + box.h - pad * 1.6 - cardH;
+    const ip = 7 * k;
     return {
       photoFull: box,
       card: { x: cx, y: cy, w: cardW, h: cardH },
-      head: { x: cx + 7, y: cy + 7, w: cardW - 14, h: 15 },
-      grid: { x: cx + 7, y: cy + 25, w: cardW - 14, h: cardH - 32 },
+      head: { x: cx + ip, y: cy + ip, w: cardW - 2 * ip, h: headH },
+      grid: { x: cx + ip, y: cy + ip + headH + gap, w: cardW - 2 * ip, h: cardH - 2 * ip - headH - gap },
     };
   }
   if (style === 'fotocanto') {
-    const thumb = clamp(Math.min(w * 0.22, h * 0.16), 20, 34);
+    const thumb = clamp(Math.min(w * 0.22, h * 0.17), 18, 80);
     return {
       photoThumb: { x, y, w: thumb, h: thumb },
-      head: { x: x + thumb + 6, y, w: w - thumb - 6, h: thumb },
-      grid: { x, y: y + thumb + 8, w, h: h - thumb - 8 },
+      head: { x: x + thumb + gap, y, w: w - thumb - gap, h: thumb },
+      grid: { x, y: y + thumb + gap * 1.4, w, h: h - thumb - gap * 1.4 },
     };
   }
   // fototopo (padrão)
   const ph = h * 0.48;
-  return { photo: { x, y, w, h: ph }, head: { x, y: y + ph + 5, w, h: 15 }, grid: { x, y: y + ph + 23, w, h: h - ph - 23 } };
+  return { photo: { x, y, w, h: ph }, head: { x, y: y + ph + gap, w, h: headH }, grid: { x, y: y + ph + gap + headH + gap * 0.6, w, h: h - ph - gap * 1.6 - headH } };
 }
 
 function drawMonthHead(pen, r, s, m, caption) {
+  const k = clamp(r.w / 190, 0.45, 2.2);
   const name = EPDates.MONTHS_PT[m - 1];
-  pen.text(name, r.x, r.y, { size: 16, font: 'bold', family: 'serif', color: s.ink, align: 'l', baseline: 'top' });
-  pen.text(String(s.year), r.x + r.w, r.y + 2, { size: 10, family: 'sans', color: s.accent, align: 'r', baseline: 'top', font: 'bold' });
+  const nameSize = clamp(Math.min(r.h * 0.95 * PT, 26 * k), 9, 60);
+  pen.text(name, r.x, r.y + r.h * 0.45, { size: nameSize, family: 'serif', color: s.ink, align: 'l', baseline: 'middle' });
+  const nameW = pen.textWidth(name, nameSize, false, 'serif');
+  pen.text(String(s.year), r.x + r.w, r.y + r.h * 0.45, { size: clamp(nameSize * 0.42, 6, 20), family: 'sans', color: s.accent, align: 'r', baseline: 'middle', font: 'bold', tracking: 0.6 * k });
   if (caption) {
     const txt = EPDates.applyVars(caption, { date: new Date(s.year, m - 1, 1), year: s.year });
-    if (txt) pen.text(txt, r.x, r.y + r.h - 1, { size: 8.5, family: 'sans', color: mixHex(s.ink, s.paperBg, 0.35), align: 'l', baseline: 'alphabetic', font: 'it' });
+    if (txt) {
+      const cs = clamp(nameSize * 0.38, 6, 16);
+      const room = r.w - nameW - pen.textWidth(String(s.year), nameSize * 0.42, true, 'sans') - 12 * k;
+      if (room > 20) pen.text(pen.wrapText(txt, room, cs, false, 1, 'serif')[0] || '', r.x + nameW + 5 * k, r.y + r.h * 0.5, { size: cs, family: 'serif', color: mixHex(s.ink, s.paperBg, 0.4), align: 'l', baseline: 'middle', font: 'it' });
+    }
   }
 }
 
 function drawMonthGrid(pen, r, s, m) {
   const year = s.year, weekStart = s.weekStart;
   const order = weekStart === 'sun' ? [0, 1, 2, 3, 4, 5, 6] : [1, 2, 3, 4, 5, 6, 0];
-  const dowLbl = weekStart === 'sun' ? ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'] : ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'];
+  const DOW3 = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'], DOW1 = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
   const first = new Date(year, m - 1, 1);
   const startCol = order.indexOf(first.getDay());
   const dim = EPDates.daysInMonth(year, m);
   const rows = Math.ceil((startCol + dim) / 7);
-  const headH = Math.min(7, r.h * 0.09);
-  const cw = r.w / 7, rh = (r.h - headH) / rows;
-  const gridLine = mixHex(s.ink, s.paperBg, 0.82);
+  const cw = r.w / 7;
+  const headH = clamp(r.h * 0.07, 4, 12 * clamp(r.w / 190, 0.6, 2));
+  const rh = (r.h - headH) / rows;
+  const k = clamp(Math.min(cw / 27, rh / 22), 0.4, 2.4);
+  const gridLine = mixHex(s.ink, s.paperBg, 0.84);
+  const wkTint = mixHex(s.accent, s.paperBg, 0.93);
+  const faint = mixHex(s.ink, s.paperBg, 0.72);
+  const useLong = cw > 14;
   for (let c = 0; c < 7; c++) {
-    pen.text(dowLbl[c], r.x + c * cw + cw / 2, r.y + headH / 2, { size: Math.min(8.5, headH * 0.6), font: 'bold', color: mixHex(s.ink, s.paperBg, 0.4), align: 'c', baseline: 'middle', family: 'sans' });
+    const dow = order[c];
+    pen.text(useLong ? DOW3[dow] : DOW1[dow], r.x + c * cw + cw / 2, r.y + headH / 2, { size: clamp(headH * 0.5 * PT * 0.9, 4, 12), font: 'bold', color: (dow === 0 || dow === 6) ? s.accent : mixHex(s.ink, s.paperBg, 0.35), align: 'c', baseline: 'middle', family: 'sans', tracking: useLong ? 0.25 * k : 0 });
   }
-  pen.line(r.x, r.y + headH, r.x + r.w, r.y + headH, { w: 0.35, color: gridLine });
+  const y0 = r.y + headH;
+  // fins de semana com fundo levíssimo
+  for (let c = 0; c < 7; c++) if (order[c] === 0 || order[c] === 6) pen.rect(r.x + c * cw, y0, cw, rh * rows, { fill: wkTint });
+  // linhas da grade (horizontais + verticais) — mais limpo que um retângulo por dia
+  for (let rr = 0; rr <= rows; rr++) pen.line(r.x, y0 + rr * rh, r.x + r.w, y0 + rr * rh, { w: rr === 0 ? 0.45 : 0.22, color: rr === 0 ? mixHex(s.ink, s.paperBg, 0.55) : gridLine });
+  for (let c = 1; c < 7; c++) pen.line(r.x + c * cw, y0, r.x + c * cw, y0 + rows * rh, { w: 0.22, color: gridLine });
+  const numSize = clamp(Math.min(rh * 0.3, cw * 0.36) * PT, 4.5, 26);
+  const npad = clamp(cw * 0.07, 0.8, 4);
+  // dias do mês anterior/seguinte, bem apagados, completando a grade
+  const prevDim = EPDates.daysInMonth(m === 1 ? year - 1 : year, m === 1 ? 12 : m - 1);
+  for (let i = 0; i < startCol; i++) {
+    pen.text(String(prevDim - startCol + 1 + i), r.x + i * cw + npad, y0 + npad, { size: numSize * 0.8, color: faint, baseline: 'top' });
+  }
+  for (let i = startCol + dim, d = 1; i < rows * 7; i++, d++) {
+    pen.text(String(d), r.x + (i % 7) * cw + npad, y0 + Math.floor(i / 7) * rh + npad, { size: numSize * 0.8, color: faint, baseline: 'top' });
+  }
   for (let day = 1; day <= dim; day++) {
     const idx = startCol + day - 1, rr = Math.floor(idx / 7), cc = idx % 7;
-    const cx = r.x + cc * cw, cy = r.y + headH + rr * rh;
-    pen.rect(cx, cy, cw, rh, { stroke: gridLine, w: 0.2 });
+    const cx = r.x + cc * cw, cy = y0 + rr * rh;
     const dt = new Date(year, m - 1, day);
     const dow = dt.getDay();
     const mark = markOn(dt);
-    const numColor = mark ? s.accent : (dow === 0 || dow === 6 ? mixHex(s.ink, s.paperBg, 0.3) : s.ink);
-    pen.text(String(day), cx + 2, cy + 1.6, { size: Math.min(9.5, rh * 0.26, cw * 0.34), color: numColor, font: mark ? 'bold' : 'reg', baseline: 'top' });
-    if (mark && rh > 9) {
-      const lines = pen.wrapText ? pen.wrapText(mark, cw - 3, Math.min(6, rh * 0.15), false, 2, 'sans') : [mark];
-      let ly = cy + rh - 2 - (lines.length - 1) * 3.2;
-      lines.forEach(line => { if (line) { pen.text(line, cx + 1.6, ly, { size: Math.min(6, rh * 0.15), color: s.accent, baseline: 'top' }); ly += 3.2; } });
-    } else if (mark) {
-      pen.dot(cx + cw - 2.6, cy + 2.6, 0.9, { fill: s.accent });
+    const numColor = mark ? s.accent : (dow === 0 || dow === 6 ? mixHex(s.ink, s.paperBg, 0.25) : s.ink);
+    pen.text(String(day), cx + npad, cy + npad, { size: numSize, color: numColor, font: mark ? 'bold' : undefined, baseline: 'top' });
+    if (mark) {
+      const ms = clamp(numSize * 0.5, 3.6, 10);
+      const lh = ms * 1.15 / PT;
+      if (rh > numSize / PT + lh * 1.6) {
+        const lines = pen.wrapText(mark, cw - 2 * npad, ms, false, 2, 'sans');
+        let ly = cy + rh - npad - lines.length * lh;
+        lines.forEach(line => { if (line) { pen.text(line, cx + npad, ly, { size: ms, color: s.accent, baseline: 'top' }); ly += lh; } });
+      } else {
+        pen.dot(cx + cw - npad - 0.8, cy + npad + 0.8, 0.7, { fill: s.accent });
+      }
     }
   }
 }
@@ -316,25 +474,26 @@ function drawMonthGrid(pen, r, s, m) {
 function drawMonthPage(pen, box, s, m, opts) {
   const L = monthLayout(s.style, box);
   const mo = (state.months && state.months[m - 1]) || emptyMonth();
+  const has = !!(mo.photo && pen.image);
   if (s.style === 'fotofundo' || s.style === 'moldura') {
-    if (mo.photo && pen.image) pen.image(mo.photo, L.photoFull.x, L.photoFull.y, L.photoFull.w, L.photoFull.h, { fit: 'cover' });
-    else pen.rect(box.x, box.y, box.w, box.h, { fill: s.paperBg });
+    if (has) pen.image(mo.photo, L.photoFull.x, L.photoFull.y, L.photoFull.w, L.photoFull.h, { fit: 'cover' });
+    else drawPhotoPlaceholder(pen, s.style === 'moldura' ? L.photoFull : { x: box.x, y: box.y, w: box.w, h: L.panel.y - box.y }, s, m, opts, true);
     if (s.style === 'moldura') {
-      pen.rect(box.x + 5, box.y + 5, box.w - 10, box.h - 10, { stroke: s.accent, w: 0.6 });
-      pen.rect(L.card.x, L.card.y, L.card.w, L.card.h, { fill: s.paperBg, fillOpacity: mo.photo ? 0.93 : 1, rx: 2 });
+      const k = typeK(box);
+      pen.rect(box.x + 5 * k, box.y + 5 * k, box.w - 10 * k, box.h - 10 * k, { stroke: has ? s.paperBg : s.accent, w: 0.6 * k });
+      pen.rect(L.card.x, L.card.y, L.card.w, L.card.h, { fill: s.paperBg, fillOpacity: has ? 0.94 : 1, rx: 2 * k });
     } else {
-      pen.rect(L.panel.x, L.panel.y, L.panel.w, L.panel.h, { fill: s.paperBg, fillOpacity: mo.photo ? 0.90 : 1 });
+      pen.rect(L.panel.x, L.panel.y, L.panel.w, L.panel.h, { fill: s.paperBg, fillOpacity: has ? 0.92 : 1 });
     }
   } else if (s.style === 'fotocanto') {
     pen.rect(box.x, box.y, box.w, box.h, { fill: s.paperBg });
-    if (mo.photo && pen.image) pen.image(mo.photo, L.photoThumb.x, L.photoThumb.y, L.photoThumb.w, L.photoThumb.h, { fit: 'cover' });
-    else if (opts && opts.screen) pen.rect(L.photoThumb.x, L.photoThumb.y, L.photoThumb.w, L.photoThumb.h, { stroke: mixHex(s.ink, s.paperBg, 0.75), w: 0.25, dash: [1.6, 1.6] });
-    pen.rect(L.photoThumb.x, L.photoThumb.y, L.photoThumb.w, L.photoThumb.h, { stroke: s.accent, w: 0.4 });
+    if (has) pen.image(mo.photo, L.photoThumb.x, L.photoThumb.y, L.photoThumb.w, L.photoThumb.h, { fit: 'cover' });
+    else drawPhotoPlaceholder(pen, L.photoThumb, s, m, null, false);
   } else {
     pen.rect(box.x, box.y, box.w, box.h, { fill: s.paperBg });
     if (L.photo) {
-      if (mo.photo && pen.image) pen.image(mo.photo, L.photo.x, L.photo.y, L.photo.w, L.photo.h, { fit: 'cover' });
-      else if (opts && opts.screen) pen.rect(L.photo.x, L.photo.y, L.photo.w, L.photo.h, { stroke: mixHex(s.ink, s.paperBg, 0.75), w: 0.25, dash: [1.6, 1.6] });
+      if (has) pen.image(mo.photo, L.photo.x, L.photo.y, L.photo.w, L.photo.h, { fit: 'cover' });
+      else drawPhotoPlaceholder(pen, L.photo, s, m, opts, true);
     }
   }
   drawMonthHead(pen, L.head, s, m, mo.caption);
@@ -346,7 +505,7 @@ function drawPageInto(pen, pd, idx, opts = {}) {
   if (!opts.screen) pen.rect(0, 0, W, H, { fill: s.paperBg });
   const full = { x: 0, y: 0, w: W, h: H };
   const { box, strip } = contentInset(full, s.binding);
-  if (pd.kind === 'cover') drawCover(pen, box, s);
+  if (pd.kind === 'cover') drawCover(pen, box, s, opts);
   else drawMonthPage(pen, box, s, pd.m, opts);
   if (strip) drawPunchGuide(pen, strip, s.binding, opts);
 }
@@ -437,11 +596,34 @@ function gotoPage(i) {
 
 /* ================= histórico ================= */
 let past = [], future = [];
-const snap = () => JSON.stringify(state);
-function pushHistory() { past.push(snap()); if (past.length > 40) past.shift(); future.length = 0; updateHistoryButtons(); }
-function applySnap(str) { state = migrate(JSON.parse(str)); render(); save(); }
-function undo() { if (!past.length) return; future.push(snap()); applySnap(past.pop()); toast('Desfeito'); }
-function redo() { if (!future.length) return; past.push(snap()); applySnap(future.pop()); }
+// histMeta é paralelo a `past` (mesmo índice/tamanho) — só a hora de cada
+// passo, pra desenhar o histórico visual (openHistoryPop) sem duplicar o
+// snapshot nem mudar a forma de `past`/`future` que undo()/redo() já usam.
+let histMeta = [];
+// Cada passo do desfazer é um JSON do documento. Com fotos inline, 40 passos
+// eram 40 cópias de todas as fotos na memória; aqui a foto entra uma vez só
+// num "pool" e o passo guarda só a referência.
+const _pool = new Map(), _poolRev = new Map(); let _poolSeq = 0;
+const snap = () => JSON.stringify(state, (k, v) => {
+  if (typeof v !== 'string' || v.length < 2048 || !v.startsWith('data:')) return v;
+  let id = _pool.get(v); if (!id) { id = '#pool:' + (++_poolSeq); _pool.set(v, id); _poolRev.set(id, v); }
+  return id;
+});
+const unsnap = str => JSON.parse(str, (k, v) => (typeof v === 'string' && _poolRev.has(v)) ? _poolRev.get(v) : v);
+function pushHistory() { past.push(snap()); histMeta.push({ t: Date.now() }); if (past.length > 40) { past.shift(); histMeta.shift(); } future.length = 0; updateHistoryButtons(); }
+function applySnap(str) { state = migrate(unsnap(str)); render(); save(); }
+function undo() { if (!past.length) return; future.push(snap()); applySnap(past.pop()); histMeta.pop(); toast('Desfeito'); }
+function redo() { if (!future.length) return; past.push(snap()); histMeta.push({ t: Date.now() }); applySnap(future.pop()); }
+// Volta N passos de uma vez (histórico visual) — os passos intermediários
+// vão pro `future` na ordem certa, então redo() continua funcionando normal.
+function undoTo(n) {
+  if (n < 1 || n > past.length) return;
+  future.push(snap());
+  let target;
+  for (let i = 0; i < n; i++) { target = past.pop(); histMeta.pop(); if (i < n - 1) future.push(target); }
+  applySnap(target);
+  toast(n > 1 ? `Voltou ${n} passos.` : 'Desfeito');
+}
 function updateHistoryButtons() {
   const set = (id, on) => { const e = $(id); if (e) e.disabled = !on; };
   set('#b_undo', past.length); set('#b_redo', future.length);
@@ -460,13 +642,25 @@ function bindingEstimate() {
 /* ================= modelos ================= */
 // aplica só as settings do modelo (tamanho/estilo/paleta/encadernação/capa);
 // fotos e legendas já preenchidas pelo usuário não são mexidas.
+// Achado de correção: "palette" só guarda a CHAVE (ex.: 'floresta') — quem
+// de fato pinta ink/accent/paperBg é o clique manual num swatch (ver
+// bindDoc() em ui.js). Um modelo que só passa settings.palette sem também
+// passar ink/accent/paperBg deixava a cor visível do documento intacta
+// (herdada do que already estava em state.settings), mesmo a paleta
+// selecionada mudando — a pessoa clicava no modelo e "nada mudava".
 function applyTemplate(t) {
-  state.settings = migrate({ settings: { ...state.settings, ...t.settings } }).settings;
+  const merged = { ...t.settings };
+  if (merged.palette && PALETTES[merged.palette] && !('ink' in merged)) {
+    const p = PALETTES[merged.palette];
+    merged.ink = p.ink; merged.accent = p.accent; merged.paperBg = p.paperBg;
+  }
+  state.settings = migrate({ settings: { ...state.settings, ...merged } }).settings;
 }
 
 /* ================= documento novo ================= */
 function newDoc() {
   state = newState();
-  currentPage = 0; past = []; future = [];
+  currentPage = 0; past = []; future = []; histMeta = [];
   _holCache = null; _evCache = null;
+  if (typeof _dpiPxCache !== 'undefined') _dpiPxCache.clear();
 }

@@ -49,6 +49,8 @@ function syncDocControls() {
   set('#d_exportMode', s.exportMode);
   set('#d_sheet', s.sheet);
   set('#d_dpi', s.exportDPI);
+  chk('#d_acrylic', s.acrylic);
+  document.body.classList.toggle('acrylic', s.acrylic);
   $('#d_exportMode').disabled = isStand;
   const eff = effectiveExportMode();
   $('#d_sheetRow').hidden = s.exportMode !== 'fit' || isStand;
@@ -101,6 +103,9 @@ function bindDoc() {
   $('#d_exportMode').onchange = e => { state.settings.exportMode = e.target.value; state.settings = migrate(state).settings; syncDocControls(); save(); };
   $('#d_sheet').onchange = e => { state.settings.sheet = e.target.value; state.settings = migrate(state).settings; save(); };
   $('#d_dpi').onchange = e => { state.settings.exportDPI = +e.target.value; save(); };
+  // Sem pushHistory: é preferência de tela (como a do Polaroide Studio), não
+  // conteúdo do documento.
+  $('#d_acrylic').onchange = e => { state.settings.acrylic = e.target.checked; document.body.classList.toggle('acrylic', e.target.checked); save(); };
   $('#d_ink').oninput = e => { pushHistory(); state.settings.ink = e.target.value; render(); save(); };
   $('#d_accent').oninput = e => { pushHistory(); state.settings.accent = e.target.value; render(); save(); };
   $('#d_paperbg').oninput = e => { pushHistory(); state.settings.paperBg = e.target.value; render(); save(); };
@@ -165,7 +170,10 @@ function tplThumbSVG(t) {
   const ax = bindPad && bind.edge === 'left' ? bindPad : 0;
   const ay = bindPad && bind.edge === 'top' ? bindPad : 0;
   const cw = W - ax, ch = H - ay;
-  const photo = `fill="${pal.accent}" opacity=".55"`;
+  // Achado de contraste: opacidade .55 numa folha branca (a maioria das
+  // paletas tem paperBg #fff) deixava o "photo" quase invisível — os cards
+  // pareciam ícones genéricos em vez de refletir a paleta de verdade.
+  const photo = `fill="${pal.accent}" opacity=".9"`;
   let scene = '';
   const style = s.style || 'sografe';
   if (style === 'fotofundo') {
@@ -215,7 +223,7 @@ function tplGrid(x, y, w, h, ink) {
   const cw = (w - gap * (cols - 1)) / cols, ch = (h - gap * (rows - 1)) / rows;
   let out = '';
   for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++)
-    out += `<rect x="${(x + c * (cw + gap)).toFixed(1)}" y="${(y + r * (ch + gap)).toFixed(1)}" width="${cw.toFixed(1)}" height="${ch.toFixed(1)}" fill="none" stroke="${ink}" stroke-width=".6" opacity=".55"/>`;
+    out += `<rect x="${(x + c * (cw + gap)).toFixed(1)}" y="${(y + r * (ch + gap)).toFixed(1)}" width="${cw.toFixed(1)}" height="${ch.toFixed(1)}" fill="none" stroke="${ink}" stroke-width=".9" opacity=".8"/>`;
   return out;
 }
 
@@ -241,6 +249,34 @@ function renderMonthList() {
     frag.appendChild(row);
   });
   box.appendChild(frag);
+  renderMonthGrid(pages);
+}
+// "Ano em miniatura" — achado da auditoria: só dava pra ver 1 página por vez
+// na prancheta; esta grade usa a MESMA foto já escolhida (mo.photo, já
+// tratada/assada) como miniatura, pra comparar cores/fotos dos 12 meses de
+// uma vez, sem re-renderizar a página inteira.
+function renderMonthGrid(pages) {
+  const box = $('#monGrid'); if (!box) return;
+  pages = pages || expand();
+  box.innerHTML = '';
+  const frag = document.createDocumentFragment();
+  pages.forEach((pd, i) => {
+    const photo = pd.kind === 'cover' ? state.settings.coverPhoto : (state.months[pd.m - 1] && state.months[pd.m - 1].photo);
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'mon-grid-card' + (i === currentPage ? ' on' : '');
+    card.innerHTML = (photo ? `<img src="${photo}" alt="">` : `<span class="mon-grid-ph">${iconSVG(pd.kind === 'cover' ? 'bookmark' : 'calendar')}</span>`) +
+      `<span class="mon-grid-lb">${esc(pd.kind === 'cover' ? 'Capa' : EPDates.MONTHS_PT[pd.m - 1])}</span>`;
+    card.onclick = () => gotoPage(i);
+    frag.appendChild(card);
+  });
+  box.appendChild(frag);
+}
+function setMonView(grid) {
+  $('#monList').hidden = grid;
+  $('#monGrid').hidden = !grid;
+  $('#mon_viewList').classList.toggle('on', !grid);
+  $('#mon_viewGrid').classList.toggle('on', grid);
 }
 
 /* ================= painel direito (página atual) ================= */
@@ -254,7 +290,9 @@ function renderMonthList() {
 // Sem popup — o editor fica embutido aqui, igual ao painel do Polaroide
 // Studio: os controles editam a foto ao vivo, o ajuste é salvo sozinho
 // quando o gesto termina (soltar o arraste/slider).
-function renderImageField(container, mo, aspect, key) {
+// px da foto assada para ~300 dpi na caixa onde ela entra (limite 3600)
+function outMaxFor(wMm, hMm) { return clamp(Math.round(Math.max(wMm, hMm) / 25.4 * 300), 1200, 3600); }
+function renderImageField(container, mo, aspect, key, outMax) {
   const onCommit = res => { mo.photo = res.dataURL; mo.photoEdit = res.edit; render(); save(); renderMonthList(); };
   if (!mo.photoSrc) {
     let btn = container.querySelector('.img-empty-pick');
@@ -279,7 +317,7 @@ function renderImageField(container, mo, aspect, key) {
   container.querySelector('[data-clr]').onclick = () => {
     pushHistory(); mo.photo = ''; mo.photoSrc = ''; mo.photoEdit = null; render(); save(); fillRight(); renderMonthList();
   };
-  EPImgEdit.mount(host, { key, src: mo.photoSrc, aspect, edit: mo.photoEdit, onHistoryPoint: pushHistory, onCommit });
+  EPImgEdit.mount(host, { key, src: mo.photoSrc, aspect, outMax: outMax || 2400, edit: mo.photoEdit, onHistoryPoint: pushHistory, onCommit });
 }
 function coverPhotoAdapter() {
   return {
@@ -297,7 +335,9 @@ function fillRight() {
   if (isCover) {
     $('#rc_title').value = state.settings.title;
     $('#rc_owner').value = state.settings.owner;
-    renderImageField($('#rc_photoFld'), coverPhotoAdapter(), W / H, 'cover');
+    const cover = coverPhotoAdapter();
+    renderImageField($('#rc_photoFld'), cover, W / H, 'cover', outMaxFor(W, H));
+    updateDpiBadge('rc_dpibar', 'rc_dot', 'rc_dpi', cover, W, H);
   } else if (pd && pd.kind === 'month') {
     const mo = state.months[pd.m - 1];
     const name = EPDates.MONTHS_PT[pd.m - 1];
@@ -305,9 +345,11 @@ function fillRight() {
     $('#rm_caption').value = mo.caption;
     const L = monthLayout(state.settings.style, { x: 0, y: 0, w: W, h: H });
     const box = L.photo || L.photoThumb || L.photoFull;
-    renderImageField($('#rm_photoFld'), mo, box ? box.w / box.h : W / H, 'month:' + pd.m);
+    renderImageField($('#rm_photoFld'), mo, box ? box.w / box.h : W / H, 'month:' + pd.m, box ? outMaxFor(box.w, box.h) : outMaxFor(W, H));
+    updateDpiBadge('rm_dpibar', 'rm_dot', 'rm_dpi', mo, box ? box.w : W, box ? box.h : H);
+    $('#rm_applyAll').hidden = !mo.photoEdit;
   }
-  if (typeof mSyncRight === 'function') mSyncRight();
+  if (typeof mSyncRight === 'function') mSyncRight(pd);
 }
 function bindRight() {
   $('#rc_title').oninput = e => { const el = e.target; state.settings.title = sanitizeText(el.value, 60); clearTimeout(el._t); el._t = setTimeout(() => { pushHistory(); render(); save(); renderMonthList(); }, 250); };
@@ -317,6 +359,83 @@ function bindRight() {
     const el = e.target; state.months[pd.m - 1].caption = sanitizeText(el.value, 120);
     clearTimeout(el._t); el._t = setTimeout(() => { pushHistory(); render(); save(); }, 250);
   };
+  $('#rm_applyAll').onclick = () => {
+    const pd = curPage(); if (!pd || pd.kind !== 'month') return;
+    applyFilterToAllMonths(state.months[pd.m - 1]);
+  };
+}
+// Copia só o AJUSTE DE COR (brilho/contraste/saturação/sépia/p&b) do mês atual
+// pros outros meses com foto — não mexe em enquadramento/zoom/rotação de cada
+// um, que é próprio de cada foto. Como mo.photo já é a imagem "assada" pelo
+// EPImgEdit, precisa reassar cada mês com o filtro novo a partir da fonte
+// original (mo.photoSrc), mantendo a mesma resolução de saída que já tinha.
+async function applyFilterToAllMonths(sourceMo) {
+  if (!sourceMo || !sourceMo.photoEdit) return;
+  const filter = { ...sourceMo.photoEdit.filter };
+  const targets = state.months.filter(mo => mo !== sourceMo && mo.photoSrc && mo.photo);
+  if (!targets.length) { toast('Nenhum outro mês com foto.'); return; }
+  pushHistory();
+  // cada mês decodifica/reassa de forma independente — roda em paralelo em
+  // vez de esperar um de cada vez (achado de eficiência: eram até 11 fotos
+  // em sequência antes).
+  const results = await Promise.all(targets.map(async mo => {
+    try {
+      const [px, natEl] = await Promise.all([decodedPx(mo.photo), EPImgEdit.loadImage(mo.photoSrc)]);
+      const edit = EPImgEdit.normEdit({ ...mo.photoEdit, filter });
+      const w = (px && px.w) || 1800, h = (px && px.h) || 1800;
+      mo.photo = EPImgEdit.bakeDataURL(natEl, edit, w, h);
+      mo.photoEdit = edit;
+      return true;
+    } catch (e) { console.error(e); return false; }
+  }));
+  const n = results.filter(Boolean).length;
+  render(); save(); renderMonthList(); fillRight();
+  toast(n ? `Filtro aplicado a ${n} mês(es).` : 'Não consegui aplicar a nenhum mês.');
+}
+
+/* ================= aviso de resolução/DPI por foto (capa + mês) =================
+   O Polaroide Studio já avisa quando a foto está com resolução baixa pro
+   tamanho impresso; o Calendar usa fotos do mesmo jeito (mesmo EPImgEdit) e
+   não avisava — achado da auditoria de UX. mo.photo já é a imagem "assada"
+   (EPImgEdit.bake): decodifica ela uma vez (cache por dataURL) pra saber os
+   pixels reais e compara com o tamanho físico (mm) da caixa onde ela entra. */
+const _dpiPxCache = new Map();
+function decodedPx(dataURL) {
+  if (!dataURL) return Promise.resolve(null);
+  if (_dpiPxCache.has(dataURL)) return Promise.resolve(_dpiPxCache.get(dataURL));
+  return new Promise(res => {
+    const im = new Image();
+    im.onload = () => {
+      const v = { w: im.naturalWidth, h: im.naturalHeight };
+      // cada edição de foto gera um dataURL novo — sem limite, isso cresce
+      // sem parar numa sessão de edição longa. 13 páginas (capa + 12 meses)
+      // no máximo têm 1 foto cada, então 20 já sobra folga.
+      if (_dpiPxCache.size >= 20) _dpiPxCache.delete(_dpiPxCache.keys().next().value);
+      _dpiPxCache.set(dataURL, v); res(v);
+    };
+    im.onerror = () => res(null);
+    im.src = dataURL;
+  });
+}
+function dpiClass(d) { return d == null ? '' : d >= 240 ? 'ok' : d >= 150 ? 'warn' : 'bad'; }
+// DPI real da impressão: pixels da foto ORIGINAL (photoSrc, antes de assar)
+// que caem dentro da caixa, divididos pelo tamanho físico da caixa. Medir a
+// versão assada (mo.photo) dava sempre "ótima" — ela é reamostrada para
+// ~1800 px, então uma foto de 300 px aparecia como se tivesse 1800.
+function photoDpi(mo, boxWmm, boxHmm) {
+  const src = mo && (mo.photoSrc || mo.photo);
+  const d = src && typeof imageDims === 'function' ? imageDims(src) : null;
+  if (!d || !d.w || !d.h || !boxWmm || !boxHmm) return null;
+  const z = (mo.photoEdit && +mo.photoEdit.zoom > 0) ? +mo.photoEdit.zoom : 1;
+  return Math.round(Math.min(d.w, d.h * boxWmm / boxHmm) / z / (boxWmm / 25.4));
+}
+function updateDpiBadge(barId, dotId, txtId, mo, boxWmm, boxHmm) {
+  const bar = $('#' + barId); if (!bar) return;
+  const d = mo && mo.photo ? photoDpi(mo, boxWmm, boxHmm) : null;
+  if (d == null) { bar.hidden = true; return; }
+  bar.hidden = false;
+  $('#' + dotId).className = 'dot ' + dpiClass(d);
+  $('#' + txtId).textContent = `Qualidade na impressão: ~${d} dpi ${d >= 240 ? '(ótima)' : d >= 150 ? '(boa)' : '(baixa — pode sair borrada)'}`;
 }
 
 /* ================= seletor de cor (input color -> botão + popover) ================= */
@@ -357,7 +476,41 @@ function openCF(btn, inp) {
   cfOpen = { pop, input: inp, btn };
 }
 document.addEventListener('pointerdown', e => { if (cfOpen && !cfOpen.pop.contains(e.target) && !cfOpen.btn.contains(e.target)) closeCF(); });
-addEventListener('keydown', e => { if (e.key === 'Escape') closeCF(); }, true);
+addEventListener('keydown', e => { if (e.key === 'Escape') { closeCF(); closeExportPop(); } }, true);
+
+/* ================= popover "Configurar exportação" (ancorado no botão da barra) ================= */
+// Exportação sai da lista do painel esquerdo — os mesmos campos (modo, folha, DPI)
+// continuam os mesmos nós do DOM, só exibidos como popover ancorado no botão da
+// barra em vez de dentro da lista que rola. No celular quem manda é o mobile.js
+// (aba "Exportar" própria) — este popover só existe no desktop.
+let exportPopOpen = false;
+function closeExportPop() {
+  const exp = $('#d_exportWrap');
+  if (!exp || !exportPopOpen) return;
+  exp.classList.remove('pop-open'); exp.open = false; exportPopOpen = false;
+  $('#b_exportCfg') && $('#b_exportCfg').classList.remove('on');
+}
+function toggleExportPop(anchor) {
+  const exp = $('#d_exportWrap');
+  if (!exp || isMobile()) return;
+  if (exportPopOpen) { closeExportPop(); return; }
+  closeCF();
+  exp.open = true; exp.classList.add('pop-open'); exportPopOpen = true;
+  anchor.classList.add('on');
+  const r = anchor.getBoundingClientRect();
+  exp.style.left = Math.max(8, Math.min(innerWidth - exp.offsetWidth - 8, r.right - exp.offsetWidth)) + 'px';
+  exp.style.top = (r.bottom + 6 + exp.offsetHeight > innerHeight ? Math.max(8, r.top - 6 - exp.offsetHeight) : r.bottom + 6) + 'px';
+}
+document.addEventListener('pointerdown', e => {
+  const exp = $('#d_exportWrap'), btn = $('#b_exportCfg');
+  if (exportPopOpen && exp && !exp.contains(e.target) && !(btn && btn.contains(e.target))) closeExportPop();
+});
+addEventListener('scroll', e => {
+  const exp = $('#d_exportWrap'), t = e.target;
+  if (exportPopOpen && exp && (t === exp || (t && t.nodeType === 1 && exp.contains(t)))) return;
+  closeExportPop();
+}, true);
+addEventListener('resize', closeExportPop);
 
 /* ================= painéis / zen ================= */
 function togglePanel(side, on) {
@@ -389,6 +542,7 @@ function bindBar() {
   $('#b_fit').onclick = fit;
   $('#b_pdf').onclick = exportPDF; $('#b_png').onclick = exportPNG;
   $('#b_print').onclick = printDoc;
+  $('#b_exportCfg').onclick = e => { e.stopPropagation(); toggleExportPop(e.currentTarget); };
   $('#b_pl').onclick = () => togglePanel('left');
   $('#b_pr').onclick = () => togglePanel('right');
   $('#b_zen').onclick = () => { zen = !zen; applyUI(); };
@@ -403,6 +557,7 @@ function bindBar() {
   $('#m_pdf').onclick = () => { mclose(); exportPDF(); };
   $('#m_png').onclick = () => { mclose(); exportPNG(); };
   $('#m_print').onclick = () => { mclose(); printDoc(); };
+  $('#m_history').onclick = () => { mclose(); openHistoryPop(); };
   $('#m_new').onclick = () => { mclose(); if (confirm('Começar um novo calendário? O atual será descartado.')) { newDoc(); syncDocControls(); render(); save(); fit(); enterOnboarding(); } };
   $('#m_save').onclick = () => { mclose(); exportProject(); };
   $('#m_open').onclick = () => { mclose(); $('#file_open').click(); };
@@ -418,10 +573,61 @@ function bindBar() {
     const bl = $('#brandLink'); bl.href = ACERVO_URL; bl.target = '_blank';
     const ma = $('#m_acervo'); if (ma) { ma.href = ACERVO_URL; ma.target = '_blank'; ma.hidden = false; }
   }
+  if (typeof PRINT_CTA_URL !== 'undefined' && PRINT_CTA_URL) {
+    const mp = $('#m_print_cta'); if (mp) { mp.href = PRINT_CTA_URL; mp.target = '_blank'; mp.hidden = false; }
+  }
   if (typeof FEEDBACK_URL !== 'undefined' && FEEDBACK_URL) {
     const mf = $('#m_feedback'); if (mf) { mf.href = FEEDBACK_URL; mf.target = '_blank'; mf.hidden = false; }
   }
 }
+/* ---- histórico visual (lista de passos pra voltar, não só Ctrl+Z às cegas) ---- */
+function relTime(ms) {
+  const s = Math.max(0, Math.round((Date.now() - ms) / 1000));
+  if (s < 5) return 'agora mesmo';
+  if (s < 60) return `há ${s}s`;
+  const m = Math.round(s / 60);
+  if (m < 60) return `há ${m} min`;
+  return `há ${Math.round(m / 60)} h`;
+}
+let _histPop = null, _histScrim = null;
+function closeHistoryPop() {
+  if (_histPop) { _histPop.remove(); _histPop = null; }
+  if (_histScrim) { _histScrim.remove(); _histScrim = null; }
+  document.body.classList.remove('sheet-open');
+}
+function openHistoryPop() {
+  closeHistoryPop();
+  if (!histMeta.length) { toast('Nada no histórico ainda.'); return; }
+  const mob = isMobile();
+  const pop = document.createElement('div'); pop.className = 'popmenu histpop scrl' + (mob ? ' pop-sheet' : '');
+  if (mob) pop.insertAdjacentHTML('beforeend',
+    `<div class="m-grab"><i></i></div><div class="tm-head"><span>Voltar até…</span><button class="iconbtn ghost" data-tmx title="Fechar">${iconSVG('x')}</button></div>`);
+  else pop.insertAdjacentHTML('beforeend', `<div class="tm-h">Voltar até…</div>`);
+  for (let i = histMeta.length - 1; i >= 0; i--) {
+    const n = histMeta.length - i;
+    pop.insertAdjacentHTML('beforeend', `<button type="button" data-n="${n}">${relTime(histMeta[i].t)}</button>`);
+  }
+  pop.addEventListener('click', e => {
+    if (e.target.closest('[data-tmx]')) { closeHistoryPop(); return; }
+    const b = e.target.closest('[data-n]'); if (!b) return; closeHistoryPop(); undoTo(+b.dataset.n);
+  });
+  document.body.appendChild(pop);
+  if (mob) {
+    _histScrim = document.createElement('div'); _histScrim.className = 'm-scrim';
+    document.body.appendChild(_histScrim);
+    _histScrim.addEventListener('pointerdown', closeHistoryPop);
+    if (typeof mDragClose === 'function') mDragClose(pop.querySelector('.m-grab'), pop, closeHistoryPop);
+    document.body.classList.add('sheet-open'); _histPop = pop; return;
+  }
+  const anchor = $('#b_more');
+  const r = anchor.getBoundingClientRect();
+  pop.style.left = Math.max(8, Math.min(innerWidth - pop.offsetWidth - 8, r.left)) + 'px';
+  pop.style.top = Math.min(innerHeight - pop.offsetHeight - 8, r.bottom + 4) + 'px';
+  _histPop = pop;
+}
+document.addEventListener('pointerdown', e => { if (_histPop && !_histPop.contains(e.target) && e.target !== _histScrim) closeHistoryPop(); });
+addEventListener('keydown', e => { if (e.key === 'Escape') closeHistoryPop(); }, true);
+
 let _menuScrimEl = null;
 function menuScrim(on) {
   if (on && isMobile()) {
@@ -512,6 +718,8 @@ function bindGlobal() {
   } catch (e) {}
   if (isMobile()) { uiState.left = false; uiState.right = false; }
   bindDoc(); bindRight(); bindBar(); bindGlobal();
+  $('#mon_viewList').onclick = () => setMonView(false);
+  $('#mon_viewGrid').onclick = () => setMonView(true);
   renderTemplates();
   if (typeof mSetup === 'function') mSetup();
   if (typeof initInstall === 'function') initInstall();
