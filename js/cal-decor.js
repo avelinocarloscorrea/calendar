@@ -9,20 +9,14 @@
 
 function calCleanExtras(raw) {
   if (!Array.isArray(raw)) return [];
-  const fams = (typeof EPFontMetrics !== 'undefined' && EPFontMetrics.families) || {};
   return raw.slice(0, 30).map(x => {
     x = x && typeof x === 'object' ? x : {};
-    const type = x.type === 'art' ? 'art' : 'text';
-    const out = { id: /^[A-Za-z0-9_-]{1,24}$/.test(x.id || '') ? x.id : uid(), type,
+    const type = ['art', 'image'].includes(x.type) ? x.type : 'text';
+    return { ...EPTextFx.clean(x), id: /^[A-Za-z0-9_-]{1,24}$/.test(x.id || '') ? x.id : uid(), type,
       text: type === 'text' ? sanitizeText(x.text || '', 300) : '',
-      art: type === 'art' && typeof EPArt !== 'undefined' && EPArt.isId(x.art) ? x.art : '' };
-    ['dx', 'dy'].forEach(k => { out[k] = isFinite(+x[k]) ? clamp(+x[k], -900, 900) : 0; });
-    out.s = isFinite(+x.s) && +x.s ? clamp(+x.s, 0.2, 6) : 1;
-    if (HEX.test(x.color || '')) out.color = x.color;
-    if (x.fam && fams[x.fam]) out.fam = x.fam;
-    if (x.bold != null) out.bold = !!x.bold;
-    return out;
-  }).filter(x => x.type === 'text' || x.art);
+      art: type === 'art' && typeof EPArt !== 'undefined' && EPArt.isId(x.art) ? x.art : '',
+      src: type === 'image' && typeof x.src === 'string' && x.src.length < 4e6 && /^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(x.src) ? x.src : '' };
+  }).filter(x => x.type === 'text' || x.art || x.src);
 }
 // lista de elementos da página (a própria referência do estado — editável)
 function calExtrasOf(pd) {
@@ -34,21 +28,25 @@ function calExtrasOf(pd) {
 function calDrawExtras(pen, list, W, H, s) {
   const k = clamp(Math.min(W, H * 1.25) / 190, 0.5, 2.2);        // mesma escala tipográfica das páginas
   list.forEach(x => {
-    const cx = W / 2 + x.dx, cy = H / 2 + x.dy, key = 'x:' + x.id;
-    if (x.type === 'art') {
-      const it = EPArt.get(x.art), base = 44 * k * x.s, ar = it ? it.w / it.h : 1;
-      const w = ar >= 1 ? base : base * ar, h = ar >= 1 ? base / ar : base;
-      if (pen.art) pen.art(x.art, cx - w / 2, cy - h / 2, w, h, { color: x.color || s.accent });
-      calHit(key, 'Ilustração', 'art', cx - w / 2, cy - h / 2, w, h);
+    const f = EPTextFx.norm(x); if (f.hide) return;
+    const cx = W / 2 + f.dx, cy = H / 2 + f.dy, key = 'x:' + x.id;
+    if (x.type === 'image') {
+      const w = 50 * k * f.s, dim = typeof imageDims === 'function' ? imageDims(x.src) : null, h = dim && dim.w ? w * dim.h / dim.w : w;
+      const P = EPTextFx.pen(pen, f);
+      P.image(x.src, cx - w / 2, cy - h / 2, w, h, { fit: 'meet' });
+      calHit(key, 'Imagem', 'image', cx - w / 2, cy - h / 2, w, h, P);
       return;
     }
-    const size = 18 * k * x.s, fam = x.fam || 'serif', lines = String(x.text || 'Texto').split('\n'), lh = size * 1.25 / PT;
-    let wmax = 0;
-    lines.forEach((l, j) => {
-      wmax = Math.max(wmax, pen.textWidth(l, size, !!x.bold, fam));
-      pen.text(l, cx, cy - (lines.length - 1) * lh / 2 + j * lh, { size, family: fam, font: x.bold ? 'bold' : undefined, color: x.color || s.ink, align: 'c', baseline: 'middle' });
-    });
-    calHit(key, 'Texto', 'text', cx - wmax / 2, cy - lines.length * lh / 2, wmax, lines.length * lh);
+    if (x.type === 'art') {
+      const it = EPArt.get(x.art), base = 44 * k * f.s, ar = it ? it.w / it.h : 1;
+      const w = ar >= 1 ? base : base * ar, h = ar >= 1 ? base / ar : base;
+      const P = EPTextFx.pen(pen, f);
+      if (pen.art) P.art(x.art, cx - w / 2, cy - h / 2, w, h, { color: f.color || s.accent });
+      calHit(key, 'Ilustração', 'art', cx - w / 2, cy - h / 2, w, h, P);
+      return;
+    }
+    const b = EPTextFx.block(pen, String(x.text || 'Texto'), cx, cy, 18 * k * f.s, f, { fam: 'serif', color: s.ink, lh: 1.25 });
+    calHit(key, 'Texto', 'text', b.x, b.y, b.w, b.h);
   });
 }
 function calUsedArt() {
@@ -56,6 +54,8 @@ function calUsedArt() {
   const ids = [];
   const add = l => (l || []).forEach(x => { if (x.type === 'art' && x.art) ids.push(x.art); });
   add(state.settings.extras); state.months.forEach(m => add(m.extras));
+  [state.settings.bg, state.settings.coverBg, ...state.months.map(m => m.pageBg)].forEach(b => { if (b && b.kind === 'pattern' && b.pat === 'art' && b.art) ids.push(b.art); });
+  if (state.settings.wm && state.settings.wm.on && state.settings.wm.kind === 'art' && state.settings.wm.art) ids.push(state.settings.wm.art);
   if (['script', 'wreath', 'boho'].includes(state.settings.coverStyle)) ids.push('enfeites/ramo');
   return ids;
 }

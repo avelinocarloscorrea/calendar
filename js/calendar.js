@@ -25,17 +25,7 @@ function newState() {
 function calCleanEl(src, re) {
   const out = {};
   if (!src || typeof src !== 'object') return out;
-  Object.keys(src).slice(0, 30).forEach(k => {
-    if (!re.test(k)) return;
-    const e = src[k] && typeof src[k] === 'object' ? src[k] : {}, v = {};
-    ['dx', 'dy'].forEach(q => { if (e[q] != null && isFinite(+e[q])) v[q] = clamp(+e[q], -800, 800); });
-    if (e.s != null && isFinite(+e.s)) v.s = clamp(+e.s, 0.25, 5);
-    if (HEX.test(e.color || '')) v.color = e.color;
-    if (typeof e.fam === 'string' && /^[A-Za-z]{2,24}$/.test(e.fam)) v.fam = e.fam;
-    if (e.bold != null) v.bold = !!e.bold;
-    if (e.hide) v.hide = true;
-    out[k] = v;
-  });
+  Object.keys(src).slice(0, 30).forEach(k => { if (re.test(k)) out[k] = EPTextFx.clean(src[k]); });
   return out;
 }
 function migrate(raw) {
@@ -88,6 +78,9 @@ function migrate(raw) {
     elMonth: calCleanEl(ds.elMonth, /^(mname|myear|caption)$/),
     acrylic: ds.acrylic !== false,
     extras: calCleanExtras(ds.extras),
+    bg: EPBackground.clean(ds.bg),                 // fundo de todas as páginas (núcleo)
+    coverBg: EPBackground.clean(ds.coverBg),       // fundo só da capa
+    wm: EPWatermark.clean(ds.wm),                  // marca d'água
   };
   const mIn = Array.isArray(src.months) ? src.months : [];
   const months = Array.from({ length: 12 }, (_, i) => {
@@ -98,6 +91,7 @@ function migrate(raw) {
       photoEdit: normPhotoEdit(m.photoEdit),
       caption: sanitizeText(m.caption, 120),
       extras: calCleanExtras(m.extras),
+      pageBg: EPBackground.clean(m.pageBg),        // fundo só deste mês
     };
   });
   // um state migrado sempre já existia antes (sessão anterior ou projeto
@@ -548,12 +542,12 @@ function drawMonthPage(pen, box, s, m, opts) {
       pen.rect(pn.x, pn.y, pn.w, pn.h, { fill: s.paperBg, fillOpacity: has ? 0.92 : 1 });
     }
   } else if (s.style === 'fotocanto') {
-    { const e = ext(box); pen.rect(e.x, e.y, e.w, e.h, { fill: s.paperBg }); }
+    paperFill(pen, box, s);
     calHit('photo', 'Foto do mês', 'photo', L.photoThumb.x, L.photoThumb.y, L.photoThumb.w, L.photoThumb.h);
     if (has) pen.image(mo.photo, L.photoThumb.x, L.photoThumb.y, L.photoThumb.w, L.photoThumb.h, { fit: 'cover' });
     else drawPhotoPlaceholder(pen, L.photoThumb, s, m, null, false);
   } else {
-    { const e = ext(box); pen.rect(e.x, e.y, e.w, e.h, { fill: s.paperBg }); }
+    paperFill(pen, box, s);
     if (L.photo) {
       calHit('photo', 'Foto do mês', 'photo', L.photo.x, L.photo.y, L.photo.w, L.photo.h);
       if (has) pen.image(mo.photo, L.photo.x, L.photo.y, L.photo.w, L.photo.h, { fit: 'cover' });
@@ -568,7 +562,7 @@ function drawMonthPage(pen, box, s, m, opts) {
 function drawYearPage(pen, box, s, pd, opts) {
   const k = typeK(box), small = Math.min(box.w, box.h) < 110;
   const pad = clamp(Math.min(box.w, box.h) * 0.04, 2.5, 16);
-  { const e = ext(box); pen.rect(e.x, e.y, e.w, e.h, { fill: s.paperBg }); }
+  paperFill(pen, box, s);
   let top = box.y + pad;
   const span = spanMonths(s).slice(pd.from, pd.from + pd.count);
   if (!small) {
@@ -602,12 +596,20 @@ function drawYearPage(pen, box, s, pd, opts) {
   });
 }
 
+// com um fundo (cor/degradê/estampa/foto) na página, o miolo não pinta a cor do papel por cima
+let PAGE_BG_ON = false;
+function paperFill(pen, box, s) { if (PAGE_BG_ON) return; const e = ext(box); pen.rect(e.x, e.y, e.w, e.h, { fill: s.paperBg }); }
 function drawPageInto(pen, pd, idx, opts = {}) {
   const s = state.settings, [W, H] = paperWH();
   const b = Math.max(0, +opts.bleed || 0);
   BLEED = { b, W, H };
   HITS = opts.hits || null;
   if (!opts.screen) pen.rect(-b, -b, W + 2 * b, H + 2 * b, { fill: s.paperBg });
+  // fundo: o da página (capa ou mês) ou o do calendário todo (a marca d'água vem por cima do conteúdo)
+  { const own = pd.kind === 'cover' ? s.coverBg : pd.kind === 'month' && state.months[pd.m - 1] ? state.months[pd.m - 1].pageBg : null;
+    const pbg = own && own.kind !== 'none' ? own : s.bg;
+    PAGE_BG_ON = EPBackground.active(pbg);
+    if (PAGE_BG_ON) EPBackground.draw(pen, -b, -b, W + 2 * b, H + 2 * b, pbg, s.paperBg); }
   const full = { x: 0, y: 0, w: W, h: H };
   const { box, strip } = contentInset(full, s.binding);
   try {
@@ -616,7 +618,8 @@ function drawPageInto(pen, pd, idx, opts = {}) {
     else drawMonthPage(pen, box, pd.y && pd.y !== s.year ? { ...s, year: pd.y } : s, pd.m, opts);
     const extras = calExtrasOf(pd);
     if (extras && extras.length) calDrawExtras(pen, extras, W, H, s);
-  } finally { BLEED = { b: 0, W, H }; HITS = null; }
+    if (s.wm && s.wm.on && (pd.kind !== 'cover' || s.wm.covers)) EPWatermark.draw(pen, W, H, s.wm, { ink: s.ink, paper: s.paperBg, fam: 'serif' });
+  } finally { BLEED = { b: 0, W, H }; HITS = null; PAGE_BG_ON = false; }
   if (strip) drawPunchGuide(pen, strip, s.binding, opts);
 }
 
@@ -626,7 +629,8 @@ function pageSig(idx, pd) {
   return [idx, pd.kind, pd.m || 0, pd.y || 0, pd.from || 0, mo ? mo.photo.length + '|' + mo.caption + JSON.stringify(mo.extras || []) : JSON.stringify(pd.kind === 'cover' ? s.extras || [] : []),
     s.year, s.startMonth, s.showMoon, s.showWeekNum, s.weekStart, s.uf, s.holNacional, s.holFacultativo, s.holComemorativa, s.events,
     s.ink, s.accent, s.paperBg, s.size, s.style, s.title, s.owner, s.showCover,
-    s.coverPhoto.length, s.coverStyle, s.binding, s.showPunch, JSON.stringify(s.el || {}), JSON.stringify(s.elMonth || {})].join('|');
+    s.coverPhoto.length, s.coverStyle, s.binding, s.showPunch, JSON.stringify(s.el || {}), JSON.stringify(s.elMonth || {}),
+    JSON.stringify([s.bg, s.coverBg, s.wm, mo ? mo.pageBg : null], (k, v) => typeof v === 'string' && v.length > 200 ? v.length + v.slice(-30) : v)].join('|');
 }
 function buildSVG(idx, pd) {
   const [W, H] = paperWH();
@@ -759,7 +763,7 @@ function bindingEstimate() {
 // (herdada do que already estava em state.settings), mesmo a paleta
 // selecionada mudando — a pessoa clicava no modelo e "nada mudava".
 function applyTemplate(t) {
-  const merged = { ...t.settings };
+  const merged = { bg: { kind: 'none' }, coverBg: { kind: 'none' }, wm: { on: false }, ...t.settings };   // modelo novo não herda fundo/marca d'água do anterior
   if (merged.palette && PALETTES[merged.palette] && !('ink' in merged)) {
     const p = PALETTES[merged.palette];
     merged.ink = p.ink; merged.accent = p.accent; merged.paperBg = p.paperBg;

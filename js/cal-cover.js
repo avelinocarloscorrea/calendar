@@ -12,22 +12,22 @@
 let HITS = null;
 function calFx(key) {
   const st = state.settings, src = /^(mname|myear|caption)$/.test(key) ? st.elMonth : st.el;
-  const e = (src && src[key]) || {};
-  const fams = (typeof EPFontMetrics !== 'undefined' && EPFontMetrics.families) || {};
-  return { dx: +e.dx || 0, dy: +e.dy || 0, s: clamp(+e.s || 1, 0.25, 5), color: HEX.test(e.color || '') ? e.color : null,
-    fam: e.fam && fams[e.fam] ? e.fam : null, bold: e.bold == null ? null : !!e.bold, hide: !!e.hide };
+  return EPTextFx.norm((src && src[key]) || {});
 }
-function calHit(key, label, kind, x, y, w, h) { if (HITS) HITS.push({ key, label, kind, x, y, w, h }); }
-// texto editável: aplica deslocamento/escala/cor/fonte e registra a caixa
+function calHit(key, label, kind, x, y, w, h, P) {
+  if (P && P.done) P.done({ x, y, w, h });
+  if (HITS) HITS.push({ key, label, kind, x, y, w, h });
+}
+// texto editável: aplica deslocamento/escala/cor/fonte/efeitos e registra a caixa
 function calText(pen, key, label, str, x, y, o) {
   const f = calFx(key); if (f.hide || !str) return;
   const size = o.size * f.s, fam = f.fam || o.family, bold = f.bold != null ? f.bold : o.font === 'bold';
-  const X = x + f.dx, Y = y + f.dy, trk = (o.tracking || 0) * f.s;
-  const w = pen.textWidth(str, size, bold, fam) + Math.max(0, [...str].length - 1) * trk;
-  pen.text(str, X, Y, { ...o, size, family: fam, font: bold ? 'bold' : (o.font === 'bold' ? undefined : o.font), color: f.color || o.color, tracking: trk || undefined });
+  const X = x + f.dx, Y = y + f.dy, trk = (o.tracking || 0) * f.s, P = EPTextFx.pen(pen, f);
+  const w = P.textWidth(str, size, bold, fam) + Math.max(0, [...str].length - 1) * trk;
+  P.text(str, X, Y, { ...o, size, family: fam, font: bold ? 'bold' : (o.font === 'bold' ? undefined : o.font), color: f.color || o.color, tracking: trk || undefined });
   const x0 = o.align === 'c' ? X - w / 2 : o.align === 'r' ? X - w : X;
   const top = o.baseline === 'top' ? Y : Y - size / PT * 0.6;
-  calHit(key, label, 'text', x0, top, w, size / PT * 1.2);
+  calHit(key, label, 'text', x0, top, w, size / PT * 1.2, P);
 }
 
 const COVER_STYLES_CAL = {
@@ -39,8 +39,9 @@ if (typeof EPArt !== 'undefined') EPArt.load('enfeites');
 function calOrn(pen, id, cx, cy, w, h, color) {
   const f = calFx('orn'); if (f.hide || !pen.art) return;
   const W = w * f.s, H = h * f.s, X = cx + f.dx - W / 2, Y = cy + f.dy - H / 2;
-  pen.art(id, X, Y, W, H, { color: f.color || color });
-  calHit('orn', 'Enfeite', 'art', X, Y, W, H);
+  const P = EPTextFx.pen(pen, f);
+  P.art(id, X, Y, W, H, { color: f.color || color });
+  calHit('orn', 'Enfeite', 'art', X, Y, W, H, P);
 }
 // capas com nome: o nome (ou o título, se não houver nome) é o protagonista
 function drawNameCover(pen, box, s, cs) {
@@ -91,7 +92,7 @@ function drawCover(pen, box, s, opts) {
     return;
   }
   if (cs === 'photoTop') {
-    { const e = ext(box); pen.rect(e.x, e.y, e.w, e.h, { fill: s.paperBg }); }
+    paperFill(pen, box, s);
     const ph = { x: box.x + pad, y: box.y + pad, w: w - 2 * pad, h: h * 0.62 };
     if (s.coverPhoto && pen.image) pen.image(s.coverPhoto, ph.x, ph.y, ph.w, ph.h, { fit: 'cover' });
     else drawPhotoPlaceholder(pen, ph, s, 0, opts, true);
@@ -127,7 +128,7 @@ function drawCover(pen, box, s, opts) {
     return;
   }
   // capa tipográfica (sem foto): ano grande + título + os 12 meses em miniatura
-  { const e = ext(box); pen.rect(e.x, e.y, e.w, e.h, { fill: s.paperBg }); }
+  paperFill(pen, box, s);
   pen.rect(box.x + pad, box.y + pad, w - 2 * pad, h - 2 * pad, { stroke: mixHex(s.accent, s.paperBg, 0.35), w: 0.5 * Math.sqrt(k) });
   const yr = spanLabel(s);
   const ySize = pen.fitText(yr, w - 4 * pad, 150 * k, 24, true, 'sans');

@@ -11,6 +11,8 @@ const CAL_MONTH_KEYS = /^(mname|myear|caption)$/;
 const CAL_ICON = {
   text: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6V4h14v2M12 4v16M9 20h6"/></svg>',
   art: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20c-4-3-8-6-8-10a4 4 0 017.5-2A4 4 0 0120 10c0 4-4 7-8 10z"/><path d="M18 2.5l.8 1.7 1.7.8-1.7.8L18 7.5l-.8-1.7-1.7-.8 1.7-.8z"/></svg>',
+  bg: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 15l6-6 12 12M14 3l7 7"/></svg>',
+  wm: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="5.5" stroke-dasharray="2 2"/><path d="M9.5 12h5"/></svg>',
   photo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 17l-5-5-9 8"/></svg>',
 };
 
@@ -58,6 +60,7 @@ function calAdd(info, type) {
     calReselect(info.idx, 'x:' + x.id);
   };
   if (type === 'art') EPArtPicker.open({ title: info.pd.kind === 'cover' ? 'Ilustração na capa' : 'Ilustração em ' + EPDates.MONTHS_PT[info.pd.m - 1], onPick: id => EPArt.ensure([id]).then(() => add({ art: id })) });
+  else if (type === 'image') EPStudio.pickImage(src => add({ src }), { max: 1200, onError: toast });
   else add({ text: 'Seu texto' });
 }
 
@@ -70,10 +73,15 @@ const calEditor = EPCanvasEdit.create({
   addTools: [
     { a: 'text', label: 'Texto', icon: CAL_ICON.text, title: 'Adicionar texto nesta página' },
     { a: 'art', label: 'Ilustração', icon: CAL_ICON.art, title: 'Adicionar ilustração nesta página' },
+    { a: 'image', label: 'Imagem', icon: CAL_ICON.photo, title: 'Adicionar imagem (logo, adesivo…)' },
     { a: 'photo', label: 'Foto', icon: CAL_ICON.photo, title: 'Foto desta página' },
+    { a: 'bg', label: 'Fundo', icon: CAL_ICON.bg, title: 'Fundo da página' },
+    { a: 'wm', label: "Marca d'água", icon: CAL_ICON.wm, title: "Marca d'água" },
   ],
   add(pageEl, a) {
     const info = calPageInfo(pageEl); if (!info) return;
+    if (a === 'bg') { openBackgroundPop(info.pd); return; }
+    if (a === 'wm') { openWatermarkPop(); return; }
     if (a !== 'photo') { calAdd(info, a); return; }
     const key = calHitsFor(info).items.find(i => i.kind === 'photo');
     if (key) calReselect(info.idx, key.key);
@@ -87,13 +95,14 @@ const calEditor = EPCanvasEdit.create({
     const info = calPageInfo(pageEl); if (!info) return null;
     const x = calExtra(info, key);
     if (x) {
-      const out = { dx: x.dx, dy: x.dy, s: x.s, color: x.color || null, fam: x.fam || '', bold: x.bold == null ? null : x.bold, removable: true, duplicable: true };
-      if (x.type === 'text') { out.text = x.text; out.textLabel = 'Texto'; out.multiline = true; out.maxlength = 300; }
+      const out = { ...EPTextFx.norm(x), fam: x.fam || '', removable: true, duplicable: true, layer: true };
+      if (x.type === 'text') { out.text = x.text; out.textLabel = 'Texto'; out.multiline = true; out.maxlength = 300; out.alignable = true; }
+      else if (x.type === 'image') out.canReplace = true;
       else { const it = EPArt.get(x.art); out.canReplace = true; out.colorable = !it || it.mono; }
       return out;
     }
     const e = calStore(key)[key] || {};
-    const out = { dx: e.dx || 0, dy: e.dy || 0, s: e.s || 1, color: e.color || null, fam: e.fam || '', bold: e.bold == null ? null : e.bold };
+    const out = { ...EPTextFx.norm(e), fam: e.fam || '' };
     if (key === 'title') { out.text = state.settings.title; out.textLabel = 'Título'; }
     else if (key === 'owner') { out.text = state.settings.owner; out.textLabel = 'Nome ou dedicatória'; }
     else if (key === 'caption' && info.pd.kind === 'month') { out.text = state.months[info.pd.m - 1].caption; out.textLabel = 'Legenda do mês'; }
@@ -115,11 +124,10 @@ const calEditor = EPCanvasEdit.create({
   set(pageEl, key, patch, opts) {
     const info = calPageInfo(pageEl); if (!info) return;
     const x = calExtra(info, key);
-    const geo = {};
-    ['dx', 'dy', 's', 'color', 'fam', 'bold'].forEach(k => { if (k in patch) geo[k] = patch[k]; });
+    const geo = { ...patch }; delete geo.text;
     if (x) {
       if ('text' in patch) x.text = sanitizeText(patch.text, 300);
-      Object.entries(geo).forEach(([k, v]) => { if (v === null || v === '') delete x[k]; else x[k] = v; });
+      if (Object.keys(geo).length) { const m = EPTextFx.merge(EPTextFx.clean(x), geo); EPTextFx.KEYS.forEach(k => { delete x[k]; }); Object.assign(x, m); }
     } else {
       if ('text' in patch) {
         if (key === 'title') state.settings.title = sanitizeText(patch.text, 60);
@@ -128,9 +136,7 @@ const calEditor = EPCanvasEdit.create({
       }
       if (Object.keys(geo).length) {
         const store = calStore(key);
-        const e = store[key] = { ...(store[key] || {}), ...geo };
-        Object.keys(e).forEach(k => { if (e[k] === null || e[k] === '' || e[k] === undefined) delete e[k]; });
-        delete e.hide;
+        store[key] = EPTextFx.merge(store[key], { ...geo, hide: null });
       }
     }
     calRedraw(info, opts && opts.live);
@@ -140,8 +146,13 @@ const calEditor = EPCanvasEdit.create({
     const x = calExtra(info, key), list = calExtrasOf(info.pd);
     if (x) {
       if (name === 'delete' || name === 'hide') list.splice(list.indexOf(x), 1);
-      else if (name === 'reset') { x.dx = 0; x.dy = 0; x.s = 1; delete x.color; delete x.fam; delete x.bold; }
-      else if (name === 'duplicate') { const c = { ...x, id: uid(), dx: x.dx + 8, dy: x.dy + 8 }; list.push(c); calRedraw(info, false); return 'x:' + c.id; }
+      else if (name === 'reset') { EPTextFx.KEYS.forEach(k => { delete x[k]; }); }
+      else if (name === 'front' || name === 'back') { list.splice(list.indexOf(x), 1); if (name === 'front') list.push(x); else list.unshift(x); }
+      else if (name === 'duplicate') { const c = { ...x, id: uid(), dx: (+x.dx || 0) + 8, dy: (+x.dy || 0) + 8 }; list.push(c); calRedraw(info, false); return 'x:' + c.id; }
+      else if (name === 'image' && x.type === 'image') {
+        EPStudio.pickImage(src => { pushHistory(); x.src = src; calRedraw(info, false); calReselect(info.idx, key); }, { max: 1200, onError: toast });
+        return;
+      }
       else if (name === 'image') {
         EPArtPicker.open({ title: 'Trocar ilustração', current: x.art, onPick: id => { pushHistory(); x.art = id; EPArt.ensure([id]).then(() => { calRedraw(info, false); calReselect(info.idx, key); }); } });
         return;

@@ -1,7 +1,7 @@
 /* packages/core/canvas-edit.js — EPCanvasEdit
  *
  * Edição direta na folha, estilo Canva, para as ferramentas vetoriais
- * (Planner Studio e Calendar Studio). O app desenha a página normalmente;
+ * (Planner Studio, Calendar Studio e Polaroide Studio). O app desenha a página normalmente;
  * este módulo sobrepõe caixas nos elementos editáveis (título, nome, logo,
  * textos, imagens e ilustrações livres…) e permite:
  *   - tocar/clicar para selecionar; tocar de novo (ou clique duplo) num
@@ -28,6 +28,9 @@
  *   })
  *   ce.pick(pageEl, clientX, clientY) -> true se pegou um elemento
  *   ce.show(pageEl)  ce.select(pageEl, key)  ce.editText()  ce.refresh()  ce.clear()
+ *
+ * Estilo de cada elemento (efeitos, giro, transparência…): modelo único em
+ * text-fx.js (EPTextFx) — get() devolve os campos e set() recebe os patches.
  */
 (function (root) {
   "use strict";
@@ -217,7 +220,7 @@
         const sx = drag.h.includes('r') ? 1 : -1, sy = drag.h.includes('b') ? 1 : -1;
         const r0 = Math.hypot(it.w / 2, it.h / 2);
         const r1 = Math.hypot(it.w / 2 + sx * mx, it.h / 2 + sy * my);
-        o.set(cur.page, drag.key, { s: clamp(Math.round(drag.s0 * (r1 / Math.max(1, r0)) * 100) / 100, 0.25, 5) }, { live: true });
+        o.set(cur.page, drag.key, { s: clamp(Math.round(drag.s0 * (r1 / Math.max(1, r0)) * 100) / 100, 0.2, 6) }, { live: true });
       } else {
         let dx = drag.dx0 + mx, dy = drag.dy0 + my;
         const it = drag.it, cxNow = it.x + it.w / 2 + mx, cyNow = it.y + it.h / 2 + my;
@@ -278,6 +281,7 @@
       const mv = { ArrowLeft: [-d, 0], ArrowRight: [d, 0], ArrowUp: [0, -d], ArrowDown: [0, d] }[e.key];
       if (mv) { e.preventDefault(); e.stopImmediatePropagation(); o.begin(page, k); o.set(page, k, { dx: Math.round(((+f.dx || 0) + mv[0]) * 10) / 10, dy: Math.round(((+f.dy || 0) + mv[1]) * 10) / 10 }, { live: false }); place(); }
       else if (e.key === 'Escape') { e.stopImmediatePropagation(); select(page, null); }
+      else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd' && f.duplicable) { e.preventDefault(); e.stopImmediatePropagation(); o.begin(page, k); const nk = o.action(page, k, 'duplicate'); if (typeof nk === 'string') select(page, nk); }
       else if (e.key === 'Enter' && f.text != null) { e.preventDefault(); e.stopImmediatePropagation(); editText(); }
       else if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); e.stopImmediatePropagation(); o.begin(page, k); o.action(page, k, f.removable ? 'delete' : 'hide'); select(page, null); }
     }, true);

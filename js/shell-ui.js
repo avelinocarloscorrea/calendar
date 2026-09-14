@@ -70,8 +70,8 @@ function samplePhotos() {
 }
 
 /* ================= galeria ================= */
-const TPL_CATS = [{ id: 'parede', label: 'Parede' }, { id: 'mesa', label: 'Mesa e ímã' }];
-const TPL_CAT = { 'parede-min': 'parede', 'parede-fotos': 'parede', poster: 'parede', quadrado: 'parede', 'editorial-pb': 'parede', 'mesa-exec': 'mesa', cavalete: 'mesa', ima: 'mesa' };
+const TPL_CATS = [{ id: 'estilo', label: 'Com estilo' }, { id: 'parede', label: 'Parede' }, { id: 'mesa', label: 'Mesa e ímã' }];
+const TPL_CAT = { boho: 'estilo', confete: 'estilo', empresa: 'estilo', ceu: 'estilo', 'parede-min': 'parede', 'parede-fotos': 'parede', poster: 'parede', quadrado: 'parede', 'editorial-pb': 'parede', 'mesa-exec': 'mesa', cavalete: 'mesa', ima: 'mesa' };
 
 function withTemplateState(t, fn, opts = {}) {
   const saved = state;

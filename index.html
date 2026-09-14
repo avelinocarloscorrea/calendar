@@ -34,15 +34,16 @@
 <meta name="twitter:description" content="Gere um calendário personalizado com suas fotos e os feriados do Brasil, pronto para impressão — sem cadastro, sem enviar nada a servidor nenhum.">
 <link rel="preload" as="font" type="font/woff2" crossorigin href="assets/arimo-latin-400-normal.woff2">
 <link rel="preload" as="font" type="font/woff2" crossorigin href="assets/arimo-latin-700-normal.woff2">
-<link rel="stylesheet" href="css/base.css?v=260914200349">
-<link rel="stylesheet" href="css/layout.css?v=260914200349">
-<link rel="stylesheet" href="css/studio.css?v=260914200349">
-<link rel="stylesheet" href="css/util.css?v=260914200349">
-<link rel="stylesheet" href="css/print.css?v=260914200349">
-<link rel="stylesheet" href="css/mobile.css?v=260914200349">
-<link rel="stylesheet" href="vendor/core/fonts/fonts.css?v=260914200349">
-<link rel="stylesheet" href="vendor/core/shell.css?v=260914200349">
-<link rel="stylesheet" href="vendor/core/canvas-edit.css?v=260914200349">
+<link rel="stylesheet" href="css/base.css?v=260914225252">
+<link rel="stylesheet" href="css/layout.css?v=260914225252">
+<link rel="stylesheet" href="css/studio.css?v=260914225252">
+<link rel="stylesheet" href="css/util.css?v=260914225252">
+<link rel="stylesheet" href="css/print.css?v=260914225252">
+<link rel="stylesheet" href="css/mobile.css?v=260914225252">
+<link rel="stylesheet" href="vendor/core/fonts/fonts.css?v=260914225252">
+<link rel="stylesheet" href="vendor/core/shell.css?v=260914225252">
+<link rel="stylesheet" href="vendor/core/canvas-edit.css?v=260914225252">
+<link rel="stylesheet" href="vendor/core/studio-ui.css?v=260914225252">
 </head>
 <body class="booting">
 <div id="app">
@@ -72,7 +73,7 @@
       <button type="button" data-pane="paginas"><span data-i="photo"></span><i>Fotos</i></button>
       <button type="button" data-pane="formato"><span data-i="layout"></span><i>Formato</i></button>
       <button type="button" data-pane="datas"><span data-i="calendar"></span><i>Datas</i></button>
-      <button type="button" data-pane="estilo"><span data-i="palette"></span><i>Cores</i></button>
+      <button type="button" data-pane="estilo"><span data-i="palette"></span><i>Estilo</i></button>
       <button type="button" data-pane="acabamento"><span data-i="binding"></span><i>Acabamento</i></button>
       <button type="button" data-pane="modelos"><span data-i="grid"></span><i>Modelos</i></button>
       <span class="rail-grow"></span>
@@ -221,6 +222,7 @@
             </div>
             <div class="ep-flow" aria-hidden="true"><span class="on"><b>1</b>Modelo</span><i></i><span><b>2</b>Fotos</span><i></i><span><b>3</b>Imprimir</span></div>
           </div>
+          <div id="ob_projects" hidden></div>
           <div class="ep-filters" id="tplFilters"></div>
           <div id="tplListOb" class="ep-tpls"></div>
           <div class="ep-start__foot"><span><b>Privado:</b> suas fotos não saem do aparelho.</span><span><b>Feriados:</b> nacionais e estaduais, calculados localmente.</span><span><b>Pronto para imprimir:</b> PDF em A4 ou tamanho exato.</span></div>
@@ -303,6 +305,7 @@
       </div>
       <div class="mx-card">
         <h3>Projeto</h3>
+        <button class="mbig primary" id="mx_projects" data-i="folder">Meus projetos</button>
         <div class="m2"><button class="mbig" id="mx_save" data-i="save">Salvar .json</button><button class="mbig" id="mx_open" data-i="folder">Abrir .json</button></div>
         <p class="hint">Tudo fica só neste aparelho. <b>Salvar</b> baixa um arquivo para backup ou para abrir noutro lugar.</p>
       </div>
@@ -321,8 +324,10 @@
 <div id="menu" class="scrl" hidden>
   <div class="menu-h">Calendário</div>
   <button id="m_new" data-i="filenew">Novo calendário…</button>
-  <button id="m_save" data-i="save">Salvar projeto (.json)</button>
-  <button id="m_open" data-i="folder">Abrir projeto…</button>
+  <button id="m_projects" data-i="folder">Meus projetos (neste computador)…</button>
+  <button id="m_saveLocal" data-i="save">Salvar em Meus projetos</button>
+  <button id="m_save" data-i="download">Baixar arquivo do projeto (.json)</button>
+  <button id="m_open" data-i="folder">Abrir arquivo de projeto…</button>
   <button id="m_preset" data-i="save">Salvar predefinição (só ajustes)</button>
   <button id="m_history" data-i="clock">Histórico de alterações</button>
   <div class="msep"></div>
@@ -441,35 +446,41 @@
   </div>
 </dialog>
 
-<script defer src="vendor/core/dates.js?v=260914200349"></script>
-<script defer src="vendor/core/binding.js?v=260914200349"></script>
-<script defer src="vendor/core/imgedit.js?v=260914200349"></script>
-<script defer src="vendor/core/shell.js?v=260914200349"></script>
-<script defer src="js/config.js?v=260914200349"></script>
-<script defer src="vendor/core/fonts/metrics.js?v=260914200349"></script>
-<script defer src="vendor/core/ttf.js?v=260914200349"></script>
-<script defer src="vendor/core/jpeg.js?v=260914200349"></script>
-<script defer src="vendor/core/color.js?v=260914200349"></script>
-<script defer src="vendor/core/pdf.js?v=260914200349"></script>
-<script defer src="vendor/core/pen.js?v=260914200349"></script>
-<script defer src="vendor/core/print.js?v=260914200349"></script>
-<script defer src="vendor/core/svgart.js?v=260914200349"></script>
-<script defer src="vendor/core/art.js?v=260914200349"></script>
-<script defer src="vendor/core/art/index.js?v=260914200349"></script>
-<script defer src="vendor/core/art-picker.js?v=260914200349"></script>
-<script defer src="vendor/core/canvas-edit-bar.js?v=260914200349"></script>
-<script defer src="vendor/core/canvas-edit-text.js?v=260914200349"></script>
-<script defer src="vendor/core/canvas-edit.js?v=260914200349"></script>
-<script defer src="js/images.js?v=260914200349"></script>
-<script defer src="js/calendar.js?v=260914200349"></script>
-<script defer src="js/cal-cover.js?v=260914200349"></script>
-<script defer src="js/cal-decor.js?v=260914200349"></script>
-<script defer src="js/io.js?v=260914200349"></script>
-<script defer src="js/mobile.js?v=260914200349"></script>
-<script defer src="js/install.js?v=260914200349"></script>
-<script defer src="js/ui.js?v=260914200349"></script>
-<script defer src="js/sheet-edit.js?v=260914200349"></script>
-<script defer src="js/wizard.js?v=260914200349"></script>
-<script defer src="js/shell-ui.js?v=260914200349"></script>
+<script defer src="vendor/core/dates.js?v=260914225252"></script>
+<script defer src="vendor/core/binding.js?v=260914225252"></script>
+<script defer src="vendor/core/imgedit.js?v=260914225252"></script>
+<script defer src="vendor/core/shell.js?v=260914225252"></script>
+<script defer src="js/config.js?v=260914225252"></script>
+<script defer src="vendor/core/fonts/metrics.js?v=260914225252"></script>
+<script defer src="vendor/core/ttf.js?v=260914225252"></script>
+<script defer src="vendor/core/jpeg.js?v=260914225252"></script>
+<script defer src="vendor/core/color.js?v=260914225252"></script>
+<script defer src="vendor/core/pdf.js?v=260914225252"></script>
+<script defer src="vendor/core/pen.js?v=260914225252"></script>
+<script defer src="vendor/core/print.js?v=260914225252"></script>
+<script defer src="vendor/core/svgart.js?v=260914225252"></script>
+<script defer src="vendor/core/art.js?v=260914225252"></script>
+<script defer src="vendor/core/art/index.js?v=260914225252"></script>
+<script defer src="vendor/core/art-picker.js?v=260914225252"></script>
+<script defer src="vendor/core/canvas-edit-bar.js?v=260914225252"></script>
+<script defer src="vendor/core/canvas-edit-text.js?v=260914225252"></script>
+<script defer src="vendor/core/canvas-edit.js?v=260914225252"></script>
+<script defer src="vendor/core/text-fx.js?v=260914225252"></script>
+<script defer src="vendor/core/background.js?v=260914225252"></script>
+<script defer src="vendor/core/watermark.js?v=260914225252"></script>
+<script defer src="vendor/core/projects.js?v=260914225252"></script>
+<script defer src="vendor/core/studio-ui.js?v=260914225252"></script>
+<script defer src="js/images.js?v=260914225252"></script>
+<script defer src="js/calendar.js?v=260914225252"></script>
+<script defer src="js/cal-cover.js?v=260914225252"></script>
+<script defer src="js/cal-decor.js?v=260914225252"></script>
+<script defer src="js/io.js?v=260914225252"></script>
+<script defer src="js/mobile.js?v=260914225252"></script>
+<script defer src="js/install.js?v=260914225252"></script>
+<script defer src="js/ui.js?v=260914225252"></script>
+<script defer src="js/sheet-edit.js?v=260914225252"></script>
+<script defer src="js/design-ui.js?v=260914225252"></script>
+<script defer src="js/wizard.js?v=260914225252"></script>
+<script defer src="js/shell-ui.js?v=260914225252"></script>
 </body>
 </html>
