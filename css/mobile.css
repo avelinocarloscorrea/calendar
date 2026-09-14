@@ -64,7 +64,6 @@
   .msheet textarea{min-height:110px}
   .msheet input[type=range]{height:44px}
   .msheet .row{min-height:46px;align-items:center;font-size:14px}
-  .msheet .row input[type=checkbox]{width:22px;height:22px;flex:none}
   .msheet button{min-height:46px}
   .msheet .grp{gap:8px}
   .msheet .grp .chip{min-height:42px;padding:0 16px;font-size:13.5px}

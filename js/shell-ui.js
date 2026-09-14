@@ -408,3 +408,5 @@ setStep(document.body.classList.contains('onboarding') ? 0 : 1);
   catch (e) { console.error(e); toast('Erro ao gerar a folha de calibração.'); }
   unbusy();
 }; }
+
+EPShell.ready();

@@ -19,8 +19,12 @@ const appEl = $('#app');
 function updateBindHint() {
   const el = $('#d_bindHint'); if (!el) return;
   const e = bindingEstimate();
-  el.textContent = `${e.bindingLabel} · ${pageCount()} página(s) = ${e.sheets} folha(s) · pilha ≈ ${e.thicknessMm.toFixed(1)} mm · ` +
-    `garra wire-o ≈ ${e.wireo.label} (${e.wireo.mm} mm, passo ${e.wireo.pitch}) · espiral ≈ ${e.coil.mm} mm. ${e.note}`;
+  const b = BINDING_TYPES[state.settings.binding] || {};
+  const n = pageCount(), mm = e.thicknessMm.toFixed(1).replace('.', ',');
+  let t = `${n} ${n === 1 ? 'página' : 'páginas'} · pilha com cerca de ${mm} mm`;
+  if (b.spec && b.spec.startsWith('wireo')) t += ` · garra wire-o ${e.wireo.label}`;
+  else if (b.spec && b.spec.startsWith('coil')) t += ` · espiral de ${e.coil.mm} mm`;
+  el.textContent = t + '.';
 }
 function syncDocControls() {
   const s = state.settings;
@@ -347,6 +351,7 @@ function fillRight() {
   const isCover = pd && pd.kind === 'cover';
   $('#rightCover').hidden = !isCover;
   $('#rightMonth').hidden = !(pd && pd.kind === 'month');
+  { const yr = $('#rightYear'); if (yr) yr.hidden = !(pd && pd.kind === 'year'); }
   const [W, H] = paperWH();
   if (isCover) {
     $('#rc_title').value = state.settings.title;

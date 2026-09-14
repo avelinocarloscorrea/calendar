@@ -113,6 +113,7 @@ function mOpenTab(tab) {
   $$('#mtabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
   $$('.msheet').forEach(s => s.hidden = (s.dataset.tab !== tab));
   const w = $('#mstageWrap'); if (w) w.hidden = (tab !== 'paginas');
+  if (tab === 'pagina' && typeof fillRight === 'function') fillRight();
   if (tab === 'paginas' && !userZoomed) requestAnimationFrame(fit);
   if (tab === 'exportar' && typeof xpRefresh === 'function') { if (typeof xpSetup === 'function') xpSetup(); requestAnimationFrame(xpRefresh); }
   const sh = $$('.msheet').find(s => s.dataset.tab === tab); if (sh) sh.scrollTop = 0;
@@ -128,14 +129,14 @@ function mSync() {
    ou mês) some atrás de uma barrinha curta (nome + "Ajustar") em vez de abrir
    direto o painel inteiro (título/foto/legenda). Trocar de página volta a
    nascer recolhida. */
-let _selBarExpanded = false, _selBarLastKey = null;
+let _selBarExpanded = true, _selBarLastKey = null;
 function mSyncRight(pd) {
   pd = pd || (typeof curPage === 'function' ? curPage() : null);
   const bar = $('#msel_bar'), sheet = $('#msheet_pag');
   if (!bar || !sheet) return;
   if (!isMobile() || !pd) { bar.hidden = true; sheet.classList.remove('collapsed'); _selBarLastKey = null; return; }
   const key = pd.kind + ':' + (pd.m || '');
-  if (key !== _selBarLastKey) { _selBarExpanded = false; _selBarLastKey = key; }
+  _selBarLastKey = key;
   bar.hidden = false;
   $('#msel_name').textContent = pd.kind === 'cover' ? 'Capa' : EPDates.MONTHS_PT[pd.m - 1];
   $('#msel_adjust').textContent = _selBarExpanded ? 'Recolher' : 'Ajustar';
