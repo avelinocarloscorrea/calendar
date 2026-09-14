@@ -136,8 +136,9 @@ function wizCover(grid) {
     <div class="wiz-bigprev" id="wiz_bigprev"></div>`;
   const gal = document.createElement('div'); gal.className = 'wiz-coverGal';
   grid.append(form, gal);
-  const big = () => { $('#wiz_bigprev').innerHTML = wizThumb(d, d.showCover ? WIZ_COVER : WIZ_MONTH); wizLayout($('#wiz_bigprev')); };
+  const big = () => { if (!$('#wiz_bigprev')) return; $('#wiz_bigprev').innerHTML = wizThumb(d, d.showCover ? WIZ_COVER : WIZ_MONTH); wizLayout($('#wiz_bigprev')); };
   const paint = () => {
+    if (!gal.isConnected) return;
     gal.hidden = !d.showCover;
     gal.innerHTML = Object.entries(COVER_STYLES_CAL).map(([k, label]) => `<button type="button" class="tpl-card tpl-card--cover${d.coverStyle === k ? ' on' : ''}" data-st="${k}"><span class="tpl-card__thumb">${wizThumb({ ...d, coverStyle: k }, WIZ_COVER)}</span><span class="tpl-card__name">${esc(label.replace(/\s*\(.*\)$/, ''))}</span></button>`).join('');
     wizLayout(gal); big();
@@ -166,7 +167,7 @@ function wizDates(grid) {
       <label>Feriados do estado<select data-k="uf"><option value="">Só os nacionais</option>${EPDates.UFS.map(u => `<option${d.uf === u ? ' selected' : ''}>${u}</option>`).join('')}</select></label>
       <label class="row"><input type="checkbox" data-k="holComemorativa"${d.holComemorativa ? ' checked' : ''}> Datas comemorativas (Dia das Mães, dos Pais…)</label>
     </div><div class="wiz-bigprev" id="wiz_dateprev"></div>`;
-  const prev = () => { $('#wiz_dateprev').innerHTML = wizThumb(d, { kind: 'month', m: d.startMonth || 1 }); wizLayout($('#wiz_dateprev')); };
+  const prev = () => { if (!$('#wiz_dateprev')) return; $('#wiz_dateprev').innerHTML = wizThumb(d, { kind: 'month', m: d.startMonth || 1 }); wizLayout($('#wiz_dateprev')); };
   grid.addEventListener('change', e => {
     const el = e.target, k = el.dataset.k; if (!k) return;
     d[k] = el.type === 'checkbox' ? el.checked : (k === 'year' || k === 'startMonth') ? +el.value : el.value;

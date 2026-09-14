@@ -39,6 +39,7 @@
 .ce-done svg{width:17px;height:17px}
 .ce-bar__name{flex:none;padding:0 8px 0 6px;font-size:12px;color:var(--muted);font-weight:600;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ce-bar__head{display:flex;align-items:center;gap:8px;padding:2px 2px 8px}
+.ce-ptoggle{display:none}
 .ce-bar__head b{font-size:13px}
 .ce-bar__hint{font-size:11.5px;color:var(--faint);flex:1;min-width:0}
 
@@ -70,11 +71,22 @@
   .ce-bar--top .ce-tool[data-ce="size"] span{min-width:34px;text-align:left;font-variant-numeric:tabular-nums}
   .ce-bar--top .ce-done{margin-left:6px}
   .ce-bar--add .ce-tool>span{display:inline!important}
+  .ce-bar--top.ce-bar--compact .ce-tool>span,.ce-bar--top.ce-bar--compact .ce-bar__name,.ce-bar--top.ce-bar--compact .ce-done>span{display:none!important}
+  .ce-bar--top.ce-bar--compact .ce-tool{padding:0 7px}
+  .ce-bar--top.ce-bar--compact .ce-done{padding:0 9px}
+  .ce-bar--top.ce-bar--compact .ce-panel{max-width:calc(100vw - 48px)}
   .ce-bar--add .ce-tool{padding:0 11px}
   .ce-bar--photo{padding:12px;border-radius:14px;overflow:auto}
   .ce-bar--photo .ce-tools{flex-wrap:wrap;gap:6px;padding-top:8px;border-top:1px solid var(--line-2)}
   .ce-bar--photo .ce-tool>span{display:inline!important}
   .ce-bar--photo .ce-tool{border:1px solid var(--line)}
+  .ce-ptoggle{display:inline-flex;align-items:center;min-height:0;height:28px;padding:0 10px;border-radius:99px;font-size:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+  .ce-ptoggle::after{content:"";width:6px;height:6px;margin-left:7px;border:solid currentColor;border-width:0 1.5px 1.5px 0;transform:translateY(-2px) rotate(45deg)}
+  .ce-ptoggle[aria-expanded="true"]::after{transform:translateY(1px) rotate(225deg)}
+  .ce-bar--photo.is-collapsed .ce-phototools{display:none}
+  .ce-bar--photo .ce-bar__head{flex-wrap:wrap}
+  .ce-bar--photo .ce-bar__hint{order:3;flex-basis:100%;white-space:normal}
+  .ce-bar--photo .ce-ptoggle{margin-left:auto}
 }
 
 /* celular: barra no rodapé, por cima das abas (como no Canva) */

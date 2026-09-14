@@ -35,6 +35,7 @@
   function create(ctx) {
     const o = ctx.o;
     let el = null, panel = '';          // painel aberto: '' | 'font' | 'size' | 'color'
+    let photoOpen = null;               // painel de foto: null = automático (recolhe se cobrir a página)
 
     function close() {
       if (el) { el.remove(); el = null; }
@@ -116,7 +117,8 @@
       const done = `<button type="button" class="ce-done" data-ce="close" title="Concluir (Esc)">${svg('check')}<span>Concluir</span></button>`;
       if (it.kind === 'photo') {
         el.className += ' ce-bar--photo';
-        el.innerHTML = `<div class="ce-bar__head"><b>${esc(it.label || 'Foto')}</b><span class="ce-bar__hint">Arraste a foto na folha para enquadrar · pinça ou roda para zoom</span></div>` +
+        el.innerHTML = `<div class="ce-bar__head"><b>${esc(it.label || 'Foto')}</b><span class="ce-bar__hint">Arraste a foto na folha para enquadrar · pinça ou roda para zoom</span>` +
+          `<button type="button" class="ce-ptoggle" data-ce="ptoggle" aria-expanded="true">Ajustes</button></div>` +
           '<div class="ce-bar__tools-slot"></div>' +
           `<div class="ce-tools">${f.canReplace ? tool('image', svg('image'), 'Trocar foto') : ''}${f.removable ? tool('delete', svg('trash'), 'Remover', ' is-danger') : ''}${done}</div>`;
         const pt = ctx.photoTools(); if (pt) el.querySelector('.ce-bar__tools-slot').replaceWith(pt);
@@ -151,11 +153,27 @@
         const x = rightFree > leftFree ? Math.min(r.left + r.width - 312, pr.right + 12) : Math.max(r.left + 12, pr.left - 312);
         el.style.width = '300px'; el.style.left = x + 'px'; el.style.top = (r.top + 12) + 'px';
         el.style.maxHeight = Math.max(240, r.height - 24) + 'px';
+        // sem espaço ao lado da página, os controles começam recolhidos para não cobrir a foto
+        const covers = x < pr.right && x + 300 > pr.left;
+        const open = photoOpen == null ? !covers : photoOpen;
+        el.classList.toggle('is-collapsed', !open);
+        const t = el.querySelector('.ce-ptoggle'); if (t) t.setAttribute('aria-expanded', String(open));
         return;
       }
       el.style.width = '';
-      const bw = Math.min(r.width - 24, el.offsetWidth);
-      el.style.left = (r.left + (r.width - bw) / 2) + 'px';
+      // painéis laterais flutuando sobre a prancheta (telas estreitas) encurtam a área livre
+      let L = r.left, R = r.left + r.width;
+      ['#left', '#right'].forEach(sel => {
+        const p = document.querySelector(sel); if (!p || !p.offsetWidth) return;
+        const pr = p.getBoundingClientRect();
+        if (pr.right <= L || pr.left >= R) return;
+        if (pr.left > L + (R - L) / 2) R = Math.min(R, pr.left); else L = Math.max(L, pr.right);
+      });
+      // pouco espaço: só ícones (os nomes continuam no title/tooltip)
+      el.classList.remove('ce-bar--compact');
+      if (el.offsetWidth > R - L - 24) el.classList.add('ce-bar--compact');
+      const bw = Math.min(R - L - 24, el.offsetWidth);
+      el.style.left = Math.max(L + 12, L + (R - L - bw) / 2) + 'px';
       el.style.top = (r.top + 12) + 'px';
     }
 
@@ -166,7 +184,8 @@
       el.addEventListener('click', e => {
         const b = e.target.closest('[data-ce]'); if (!b) return;
         const a = b.dataset.ce;
-        if (a === 'close') { ctx.select(page, null); return; }
+        if (a === 'close') { photoOpen = null; ctx.select(page, null); return; }
+        if (a === 'ptoggle') { photoOpen = el.classList.contains('is-collapsed'); position(); return; }
         if (a === 'font' || a === 'size' || a === 'color-panel') { const p = a === 'color-panel' ? 'color' : a; panel = panel === p ? '' : p; open(); return; }
         if (a === 'edit') { panel = ''; ctx.editText(); return; }
         if (a === 'smaller') step(-0.05);
@@ -201,7 +220,7 @@
 
     return {
       open, close, position,
-      reset() { panel = ''; },
+      reset() { panel = ''; photoOpen = null; },
       get el() { return el; },
     };
   }
