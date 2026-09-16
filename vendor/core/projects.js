@@ -51,6 +51,8 @@
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   const curKey = () => 'ep-projects-cur:' + O.app, autoKey = () => 'ep-projects-auto:' + O.app;
 
+  // Tamanho aproximado do projeto, só para mostrar "3,2 MB" no cartão. Conta
+  // Blobs pelo byte e strings pelo caractere — não precisa ser exato.
   function sizeOf(data) {
     if (typeof data === 'string') return data.length;
     let n = 0;
@@ -135,6 +137,9 @@
     }
     return saveAs();
   }
+  // Chamado a cada alteração já salva no documento. Só age quando há um projeto
+  // aberto e o "atualizar sozinho" está ligado; e espera alguns segundos para
+  // não regravar tudo a cada tecla digitada.
   function changed() {
     if (!O || !autoOn() || !linked()) return;
     clearTimeout(dirtyT);

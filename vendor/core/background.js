@@ -61,7 +61,8 @@
   const active = bg => !!(bg && bg.kind && bg.kind !== 'none');
 
   /* ---------------- desenho ---------------- */
-  // semente determinística (confete igual na tela e no PDF)
+  // Sorteio com semente fixa: o confete precisa cair exatamente nos mesmos
+  // lugares na tela e no PDF — senão a prévia mentiria.
   function rng(seed) { let s = seed >>> 0 || 1; return () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296); }
   function heart(cx, cy, r) {
     const pts = [];
@@ -165,6 +166,8 @@
         if (pen.rotate) pen.unclip();
       }
     } else if (b.kind === 'pattern') {
+      // as estampas usam cores cheias, sem transparência: nem o PDF nem o SVG
+      // da caneta têm opacidade em polígono, e cor sólida imprime melhor
       pen.rect(x, y, w, h, { fill: b.c1 });
       drawPattern(pen, x, y, w, h, b);
     } else if (b.kind === 'image' && b.src) {

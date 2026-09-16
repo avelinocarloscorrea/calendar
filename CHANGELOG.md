@@ -1,5 +1,22 @@
 # Histórico
 
+## 0.5 — efeitos de texto, fundos, marca d'água e Meus projetos
+- **Estilo completo em cada texto da folha**: itálico, alinhamento, doze
+  estilos prontos (sombra, contorno, vazado, etiqueta, marca-texto, retrô,
+  neon, carimbo…) e o ajuste fino de contorno, fundo atrás do texto e sombra;
+  transparência, giro, espaço entre letras, caixa alta e camadas em Ajustes.
+- **Fundo das páginas**: cor, degradê, 16 estampas vetoriais ou foto — para o
+  calendário todo, só a capa ou só um mês.
+- **Marca d'água** em sete estilos (texto, selo, carimbo, faixa, borda,
+  ilustração ou imagem), em nove posições, desenhada por cima do conteúdo para
+  aparecer também nas páginas com blocos de cor.
+- **Imagens soltas** (logo, adesivo) além dos textos e ilustrações por página.
+- **Meus projetos**: cópias completas guardadas no navegador, com miniatura, na
+  tela inicial e no menu (Ctrl+S).
+- **Modelos novos com estilo**: Boho, Infantil confete, Calendário da empresa e
+  Céu em degradê.
+- Guia do usuário reorganizado, com uma seção só sobre editar na folha.
+
 ## 0.4 — edição estilo Canva, ilustrações e capas com nome
 - **Editar direto na folha**: tocar seleciona, arrastar move, tocar de novo
   digita; barra de ícones com fonte, tamanho e cor; foto enquadrada na página.

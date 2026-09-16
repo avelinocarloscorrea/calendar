@@ -235,8 +235,13 @@
       rotate(deg, cx, cy) { parts.push(`<g transform="rotate(${n(deg)} ${n(cx)} ${n(cy)})">`); openClips++; },
       // transparência de um grupo (feche com unclip); não passe opacity nos itens de dentro
       alpha(a) { parts.push(`<g opacity="${n(clamp01(a))}">`); openClips++; },
-      // efeitos de um elemento (text-fx.js): tudo o que foi desenhado desde mark()
-      // ganha fundo, sombra, contorno e giro — sem o chamador saber desenhar nada disso
+      // Efeitos de um elemento (contorno, fundo, sombra, giro), aplicados DEPOIS
+      // do desenho: marque com mark(), desenhe como sempre e chame fxWrap() com a
+      // caixa. Por que depois? Porque só aí se conhece a caixa real do texto (ele
+      // pode encolher para caber, quebrar em linhas…), e porque assim quem desenha
+      // a página não precisa saber nada de efeito — o estilo mora em text-fx.js.
+      // A sombra e o contorno reaproveitam o próprio traço já emitido, trocando a
+      // cor: é o mesmo desenho, então nunca ficam "fora de registro".
       mark() { return parts.length; },
       fxWrap(m, box, f) {
         const slice = parts.slice(m);
@@ -278,7 +283,10 @@
     return api;
   }
 
-  // medidas dos efeitos (mesma conta nas duas canetas)
+  // Medidas dos efeitos. Ficam aqui fora para as duas canetas usarem a MESMA
+  // conta: o mesmo documento tem de sair igual na tela e no PDF. Tudo é relativo
+  // ao corpo da letra (a altura da caixa dividida pelas linhas), então o efeito
+  // acompanha quando a pessoa aumenta o texto.
   function fxPad(box, f) {
     const py = clamp01(f.bgp == null ? 0.3 : f.bgp) * Math.min(box.h, 24) * 0.9, px = py * 1.4 + Math.min(box.h, 24) * 0.12;
     return { x: box.x - px, y: box.y - py, w: box.w + 2 * px, h: box.h + 2 * py };
@@ -445,8 +453,10 @@
         ops.push(`q ${f(c)} ${f(si)} ${f(-si)} ${f(c)} ${f(px - c * px + si * py)} ${f(py - si * px - c * py)} cm`);
       },
       alpha(a) { ops.push(`q /${registerPdfGS(a)} gs`); reset(); },
-      // efeitos de um elemento (ver SvgPen.fxWrap). mark() zera o cache de cor
-      // para o trecho sempre declarar as próprias cores (dá para recolorir).
+      // Efeitos de um elemento — ver SvgPen.fxWrap; aqui a mesma ideia em
+      // operadores PDF. mark() zera o cache de cor de propósito: a caneta costuma
+      // omitir um "rg" repetido, e sem isso o trecho recortado herdaria a cor de
+      // quem veio antes — a sombra sairia da cor errada ao ser recolorida.
       mark() { reset(); return ops.length; },
       fxWrap(m, box, fx) {
         const slice = ops.slice(m);

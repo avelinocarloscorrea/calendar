@@ -53,7 +53,10 @@
     return ar >= 1 ? [base, base / ar] : [base * ar, base];
   }
 
-  // um "carimbo" centrado em cx, cy (sem giro) — devolve nada
+  // Um "carimbo" da marca d'água, centrado em cx/cy e sem giro (quem gira é
+  // quem chama). A transparência não entra aqui: o grupo inteiro já está dentro
+  // de um pen.alpha(), e transparência dentro de transparência, no PDF, não
+  // multiplica — sobrescreve.
   function unit(pen, W, H, wm, ctx, cx, cy, scale) {
     const color = wm.color || ctx.ink || '#1f2522', paper = ctx.paper || '#ffffff';
     const fam = wm.fam || ctx.fam || 'sans', k = wm.size * scale;

@@ -5,6 +5,8 @@
    (parte de app; carregado depois de sheet-edit.js) */
 "use strict";
 
+// O "gate" grava no histórico uma vez por gesto: arrastar um controle vira um
+// único passo de desfazer, não um por pixel.
 const _designGate = EPStudio.gate(() => pushHistory());
 function designRefresh(live) {
   [...sheetsEl.children].forEach(el => { if (el.dataset) el.dataset.sig = ''; });

@@ -5,8 +5,9 @@ cavalete de mesa) com fotos suas e os feriados do Brasil, pronto para
 impressão — **PDF**, **PNG** ou impressão direta.
 
 Roda inteiro no navegador: sem instalação, sem back-end e **sem enviar nada**.
-Fotos e projeto ficam só no navegador (`localStorage`); para backup ou levar
-para outro computador, use **Salvar projeto** (`.json`).
+O calendário fica no navegador (`localStorage`) e as fotos no IndexedDB;
+**Meus projetos** guarda cópias completas ali mesmo, com miniatura. Para backup
+ou para levar a outro computador, baixe o **arquivo do projeto** (`.json`).
 
 ## O que faz
 
@@ -14,9 +15,16 @@ para outro computador, use **Salvar projeto** (`.json`).
 - 7 tamanhos: parede A4/A3 retrato, A4 paisagem, quadrado 210×210, mesa A6
   paisagem, ímã 100×140, cavalete de mesa 148×105 (folha dobrada, face +
   painel de apoio).
-- 6 estilos de mês e paletas de cor prontas; 8 modelos completos (`Modelos`)
-  e uma tela de início com assistente de 4 passos (tamanho → estilo do mês →
-  paleta → encadernação).
+- 6 estilos de mês e paletas de cor prontas; 12 modelos completos (`Modelos`),
+  incluindo os "com estilo", e uma tela de início com assistente que desenha a
+  página real em cada escolha.
+- **Edição direta na folha**: nome do mês, ano, título, nome e legenda
+  editáveis na própria página — fonte, cor, contorno, fundo atrás do texto,
+  sombra, giro e posição; nos meses, o estilo vale para os doze.
+- Textos, ilustrações e imagens soltos por página (uma árvore em dezembro, um
+  coração em junho).
+- **Fundo** (cor, degradê, estampas ou foto) para o calendário todo, só a capa
+  ou só um mês, e **marca d'água** em sete estilos.
 - 1 foto por mês + 1 de capa, com editor embutido (arrastar, zoom, rotação
   fina, espelhar, brilho/contraste/saturação/sépia, presets
   "Básico"/"Clássico") — toda imagem é sempre redesenhada em canvas antes de

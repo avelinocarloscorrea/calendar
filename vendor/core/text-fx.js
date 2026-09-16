@@ -90,7 +90,11 @@
   }
   const txt = (str, f) => f && f.upper ? String(str == null ? '' : str).toLocaleUpperCase('pt-BR') : String(str == null ? '' : str);
 
-  // caneta com estilo: repassa tudo para a caneta real
+  // A "caneta com estilo": um invólucro fino sobre a caneta real. Ele existe
+  // para o desenho da página continuar igual ao que sempre foi — quem desenha
+  // chama P.text(...) como chamava pen.text(...) — enquanto itálico, caixa alta,
+  // espaçamento e transparência entram por fora. O que depende da caixa inteira
+  // (fundo, sombra, contorno, giro) fica para o done(), no fim.
   function pen(p, f) {
     f = f || norm({});
     const m = p.mark ? p.mark() : 0;
@@ -132,7 +136,9 @@
     return box;
   }
 
-  // estilos prontos (painel "Efeitos"): só as chaves de efeito — posição, tamanho e texto ficam
+  // Estilos prontos do painel "Efeitos". Cada um começa apagando os efeitos
+  // anteriores (RESET) para os estilos não se somarem sem querer; posição,
+  // tamanho e o texto em si nunca são tocados.
   const RESET = { ol: null, olw: null, hol: null, bg: null, bgo: null, bgp: null, bgr: null, sh: null, shd: null, sho: null, upper: null, ls: null, italic: null, op: null };
   const PRESETS = [
     { id: 'plain', label: 'Simples', patch: {} },
